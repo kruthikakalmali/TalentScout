@@ -25,4 +25,4 @@ Microsoft 365 SDK (calendar, email, Teams integration)
 Whisper (Speech-to-Text) (for voice interview integration)
 
 
-
+https://openai.com/index/new-and-improved-embedding-model/
