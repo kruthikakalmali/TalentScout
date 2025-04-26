@@ -41,12 +41,67 @@ Features:
 - Average Energy: {features['energy_mean']}
 
 Based on these:
-- Estimate the candidate's **confidence level** (High/Moderate/Low)
-- Estimate **energy level** (High/Moderate/Low)
-- Estimate **calmness** (Very Calm/Slightly Nervous/Highly Nervous)
-- Give a **final score out of 3** (1 point for high confidence, 1 point for high energy, 1 point for very calmness)
-- Short Explanation (2-3 lines)
-- Analyse whether the person gave correct anaswers to the question and give "technical score" of 1 - 100 and give some explanation as to what was expected and what was missing from the candidate for a perfect answer 
+Analyze the following extracted acoustic features from a candidate's interview audio:
+
+MFCCs (20 coefficients over time)
+
+Average pitch
+
+Average energy (volume)
+
+Based on these features, evaluate and report the candidate’s performance across the following traits:
+
+Confidence:
+
+High confidence is indicated by lower average pitch, louder energy, faster speaking rate, and falling intonation patterns.
+
+Lower confidence may be indicated by high pitch variability, rising intonations, frequent pauses, or soft, hesitant speech.
+
+Calmness:
+
+Calm delivery is reflected in steady low pitch, moderate volume, and smooth, even pacing with minimal pitch jitter.
+
+Nervousness or anxiety may be suggested by pitch breaks, choppy phrasing, or erratic loudness.
+
+Energy/Engagement:
+
+High energy is reflected in loud, lively, and quick speech with dynamic vocal variations.
+
+Low energy is reflected in soft, slow, monotonous delivery and prolonged pauses.
+
+Expressiveness (Timbre/MFCC Variance):
+
+Higher MFCC standard deviation indicates more dynamic, engaging voice tone (positive if not excessive).
+
+Very low MFCC variance may suggest flat affect or low engagement.
+
+Actionable Insights:
+
+For the recruiter:
+
+Provide a summary score for each trait (Confidence, Calmness, Energy, Expressiveness) on a scale of 1–5.
+
+Give a short paragraph on how these traits may impact the candidate’s fit for client-facing roles, leadership, teamwork, etc.
+
+Highlight potential strengths (e.g., "Strong voice confidence, suitable for sales or leadership roles.") and developmental concerns (e.g., "Slight nervousness detected; may require coaching for high-pressure communication.").
+
+For the candidate:
+
+Offer positive feedback first (e.g., "Your calm, steady voice is a major strength.").
+
+Suggest improvement areas (e.g., "Consider practicing speaking slightly louder and with more varied tone to convey greater enthusiasm.").
+
+If applicable, suggest concrete exercises like voice modulation drills, breathing techniques, or pacing practice.
+
+Important Constraints:
+
+Base insights only on acoustic features, without speculating about personal attributes like ethnicity, gender, or native language.
+
+Focus analysis on how the voice sounds, not what is said.
+
+Maintain a professional, fair, and evidence-based tone in all outputs.
+
+If voice features are ambiguous (e.g., mixed signals), explicitly mention that and suggest further evaluation through content analysis.
 Respond only in JSON format.
 """
 
