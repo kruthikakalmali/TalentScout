@@ -566,8 +566,8 @@ async def create_session(questions: list, description: str):
 #     print(live_adaptive_sessions)
 
 #     return {"session_id": session_id, "first_question": first_question}
+# from openai.whisper import WhisperTranscriber
 import whisper
-
 class StartAdaptiveInterviewRequest(BaseModel):
     candidate_name: str
     job_description: str
@@ -599,4 +599,44 @@ async def start_adaptive_interview(request: StartAdaptiveInterviewRequest):
     container.create_item(body=item)
 
     return {"session_id": session_id, "first_question": first_question}
+
+#REMOVE THE AUDIO AS PARAMETER AND ADD TRANSCRIPT AS TEST
+@app.post("/submit_adaptive_response/")
+async def submit_adaptive_response(session_id: str = Form(...), audio_response: UploadFile = File(...)):
+    query = f"SELECT * FROM c WHERE c.id = '{session_id}'"
+    try:
+        items = []
+        items = list(container.query_items(
+    query=query,
+    enable_cross_partition_query=True
+))
+        print(items[0])
+
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=404, detail="Session not found")
+
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp:
+        file_location = tmp.name
+        content = await audio_response.read()
+        tmp.write(content)
+
+    # Transcribe audio
+    # transcriber = WhisperTranscriber()
+    transcript = "the answer is that springboot is a backend framerownxnxnxscbhcbhchxbcxhcbhx and a frontend frameormcm"
+
+    agent = AdaptiveInterviewAgent(
+        endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+        api_key=os.getenv("AZURE_OPENAI_KEY"),
+        deployment="gpt-4o",
+        job_description=items[0]["job_description"]
+    )
+
+    next_question = await agent.generate_followup_question(transcript)
+
+    items[0]["questions"].append(next_question)
+    container.replace_item(item=items[0], body=items[0])
+
+    return {"next_question": next_question}
 
