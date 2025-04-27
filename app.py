@@ -190,7 +190,8 @@ async def upload_audio(session_id: str = Form(...), audio_file: UploadFile = Fil
         return {
             "message": "Audio uploaded successfully to Azure!",
             "blob_url": blob_url,
-            "analysis": analysis_result
+            "analysis": analysis_result,
+            "filename": unique_filename
         }
 
     except Exception as e:
@@ -377,7 +378,7 @@ async def get_applications(job_id: str = Query(..., description="Get all job ids
         return JSONResponse(content={"message": "No applications found for the given job_id."})
 
 @app.get("/get_all_jobs")
-async def get_applications(job_id: str = Query(..., description="The job ID to filter applications")):
+async def get_all_jobs():
     # Query the Cosmos DB for documents with type = "application" and the given job_id
     query = f"SELECT * FROM c WHERE c.type = 'job'"
 
