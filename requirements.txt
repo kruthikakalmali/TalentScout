@@ -7,3 +7,8 @@ pydantic
 requests
 librosa
 openai
+azure-cosmos==4.4.0
+azure-storage-blob==12.10.0
+numpy==1.24.2
+python-dotenv==0.21.1
+starlette==0.26.1
