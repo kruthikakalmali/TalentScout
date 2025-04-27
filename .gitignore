@@ -12,6 +12,7 @@ __pycache__/
 dist/
 build/
 venv/
+venv1/
 
 # macOS
 .DS_Store
