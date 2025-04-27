@@ -18,7 +18,19 @@ class AnalyzeRequest(BaseModel):
 from azure.cosmos import CosmosClient,PartitionKey
 from pdfutility import extract_text_from_pdf
 from downloadaudiofromazure import download_audio_from_azure
+from fastapi.middleware.cors import CORSMiddleware
 app = FastAPI()
+
+# Add CORS middleware to the FastAPI app
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],  # Allow React app's URL
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all HTTP methods (GET, POST, etc.)
+    allow_headers=["*"],  # Allows all headers
+)
+
+
 
 AZURE_CONNECTION_STRING = os.getenv("AZURE_CONNECTION_STRING")
 AZURE_CONTAINER_NAME = os.getenv("AZURE_CONTAINER_NAME")
@@ -304,7 +316,7 @@ async def generate_report(request: AnalyzeRequest):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error analyzing audio: {str(e)}")
-    
+
 
 from fastapi import FastAPI, Form
 from pydantic import BaseModel
@@ -343,12 +355,12 @@ async def create_job(
 async def get_applications(job_id: str = Query(..., description="Get all job ids")):
     # Query the Cosmos DB for documents with type = "application" and the given job_id
     query = f"SELECT * FROM c WHERE c.type = 'applicant' AND c.job_id = '{job_id}'"
-    
+
     items = []
     # Execute the query
     for item in container.query_items(query=query, enable_cross_partition_query=True):
         items.append(item)
-    
+
     # Return the results
     if items:
         return JSONResponse(content={"applications": items})
@@ -359,14 +371,97 @@ async def get_applications(job_id: str = Query(..., description="Get all job ids
 async def get_applications(job_id: str = Query(..., description="The job ID to filter applications")):
     # Query the Cosmos DB for documents with type = "application" and the given job_id
     query = f"SELECT * FROM c WHERE c.type = 'job'"
-    
+
     items = []
     # Execute the query
     for item in container.query_items(query=query, enable_cross_partition_query=True):
         items.append(item)
-    
+
     # Return the results
     if items:
         return JSONResponse(content={"jobs": items})
     else:
         return JSONResponse(content={"message": "No jobs found."})
+
+
+from fastapi.responses import JSONResponse
+
+# === Define request body model ===
+class AgentRequest(BaseModel):
+    query: str
+
+
+import openai
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
+
+# Set Azure OpenAI configurations
+# TODO: The 'openai.api_base' option isn't read in the client API. You will need to pass it when you instantiate the client, e.g. 'OpenAI(base_url=AZURE_OPENAI_ENDPOINT)'
+# openai.api_base = AZURE_OPENAI_ENDPOINT  # Replace with your Azure OpenAI endpoint
+  # Replace with your Azure OpenAI key
+  # Version can change, check Azure docs
+
+
+class AgentRequest(BaseModel):
+    query: str
+
+class RecruiterAgent:
+    def __init__(self, endpoint, api_key, deployment, api_version="2024-12-01-preview"):
+        self.client = AzureOpenAI(
+            api_version=api_version,
+            azure_endpoint=endpoint,
+            api_key=api_key,
+        )
+        self.deployment = deployment
+
+    def generate_response(self, prompt: str):
+        try:
+            # Ensure the API call is made to Azure OpenAI
+            response = self.client.chat.completions.create(
+                model=self.deployment,
+                messages=[
+                    {"role": "system", "content": "You are a recruiter co-pilot. Help recruiters screen candidates, suggest hiring strategies, and optimize interviews. give data in one line"},
+                    {"role": "user", "content": prompt},
+                ],
+                temperature=0.3,
+                max_tokens=500,
+            )
+
+            # The response is already in JSON format, so you can return it directly
+            data = {
+            "name": "John Doe",
+            "age": 30,
+            "city": "New York"
+            }
+            response_message = response.choices[0].message.content
+            formatted_response = {
+                'sender': 'agent',
+                'text': response_message  # The actual response from the AI model
+            }
+            print(formatted_response)
+
+            return formatted_response
+
+            print(response.choices[0].message.content)
+            
+            response_message = "Hello! How can I assist you with recruitment today"
+            return data
+
+        except Exception as e:
+            print(f"Error in recruiter_agent: {e}")
+            return None
+
+# Endpoint for recruiter agent interaction
+@app.post("/api/agent")
+async def recruiter_agent(request: AgentRequest):
+    recruiter = RecruiterAgent(
+            endpoint=AZURE_OPENAI_ENDPOINT,
+            api_key=AZURE_OPENAI_KEY,
+            deployment="gpt-4o"
+        )  # Initialize the class instance
+    agent_reply = recruiter.generate_response(request.query)  # Call the method for generating the response
+
+    if agent_reply:
+        return JSONResponse(content={"response": agent_reply})
+    else:
+        return JSONResponse(status_code=500, content={"error": "Failed to generate a response."})

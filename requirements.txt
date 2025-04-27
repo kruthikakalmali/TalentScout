@@ -12,3 +12,4 @@ azure-storage-blob==12.10.0
 numpy
 python-dotenv==0.21.1
 starlette==0.26.1
+fastapi[all]

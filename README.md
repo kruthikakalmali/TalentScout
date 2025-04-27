@@ -1,2 +1,5 @@
-uvicorn app:app --reload
+to start server : uvicorn app:app --reload
+
+
+
 
