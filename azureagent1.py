@@ -1,7 +1,4 @@
 import asyncio
-
-
-
 from openai import AzureOpenAI
 import librosa
 import numpy as np
