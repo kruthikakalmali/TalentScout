@@ -80,7 +80,8 @@ async def apply_to_job(
         "name": name,
         "email": email,
         "resume_text": resume_text,
-        "extracted_info": resume_text
+        "extracted_info": resume_text,
+        "type":"applicant"
     }
     container.create_item(body=item)
 
@@ -303,3 +304,38 @@ async def generate_report(request: AnalyzeRequest):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error analyzing audio: {str(e)}")
+    
+
+from fastapi import FastAPI, Form
+from pydantic import BaseModel
+from uuid import uuid4
+from starlette.responses import JSONResponse
+
+app = FastAPI()
+
+# Example schema for Job (you can expand this based on your DB model)
+class Job(BaseModel):
+    job_id: str
+    description: str
+
+# POST endpoint to create a job
+@app.post("/create_job")
+async def create_job(
+    job_id: str = Form(...),
+    description: str = Form(...)
+):
+    # Generate a unique job ID if not provided (or use the one from request)
+    job_id = job_id or str(uuid4())
+
+    # Create the job item to be posted into the DB
+    job_item = {
+        "id": job_id,
+        "job_id": job_id,
+        "description": description,
+        "type": "job"
+    }
+
+    # Here you would typically save to the database
+    container.create_item(body=job_item)  # Save to DB container
+
+    return JSONResponse(content={"job_id": job_id, "message": "Job created successfully!"})
