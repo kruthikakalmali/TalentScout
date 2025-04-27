@@ -1,7 +1,8 @@
 
 
-from fastapi import FastAPI, UploadFile, File,HTTPException,Query
+from fastapi import FastAPI, UploadFile, Form, File,HTTPException,Query
 from fastapi.responses import StreamingResponse
+from fastapi.middleware.cors import CORSMiddleware
 import tempfile
 from azure.storage.blob import BlobServiceClient
 import uuid
@@ -20,6 +21,14 @@ from pdfutility import extract_text_from_pdf
 from downloadaudiofromazure import download_audio_from_azure
 from fastapi.middleware.cors import CORSMiddleware
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Add CORS middleware to the FastAPI app
 app.add_middleware(
@@ -167,7 +176,7 @@ blob_service_client = BlobServiceClient.from_connection_string(connect_str)
 container_client = blob_service_client.get_container_client(container_name)
 
 @app.post("/upload/")
-async def upload_audio(session_id: str, audio_file: UploadFile = File(...)):
+async def upload_audio(session_id: str = Form(...), audio_file: UploadFile = File(...)):
     try:
         file_extension = audio_file.filename.split(".")[-1]
         unique_filename = f"{session_id}_{uuid.uuid4()}.{file_extension}"
