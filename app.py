@@ -12,12 +12,137 @@ import numpy as np
 from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
 import tempfile
 from pydantic import BaseModel
+import azure.cosmos
+class AnalyzeRequest(BaseModel):
+    session_id: str
+from azure.cosmos import CosmosClient,PartitionKey
+from pdfutility import extract_text_from_pdf
+from downloadaudiofromazure import download_audio_from_azure
+app = FastAPI()
+
+AZURE_CONNECTION_STRING = os.getenv("AZURE_CONNECTION_STRING")
+AZURE_CONTAINER_NAME = os.getenv("AZURE_CONTAINER_NAME")
+AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
+AZURE_OPENAI_KEY = os.getenv("AZURE_OPENAI_KEY")
+connect_str = os.getenv("AZURE_CONNECTION_STRING")
+container_name = os.getenv("AZURE_CONTAINER_NAME")
+blob_service_client = BlobServiceClient.from_connection_string(connect_str)
+container_client = blob_service_client.get_container_client(container_name)
+
+
+
+from fastapi import FastAPI, UploadFile, Form
+from fastapi.responses import JSONResponse
+import uuid
+# from azure.cosmos import CosmosClient, PartitionKey
+import openai  # Azure OpenAI
+import os
+
+# Cosmos DB settings
+COSMOS_ENDPOINT = "https://talentscoutdbfordata.documents.azure.com:443/"
+COSMOS_KEY = "PKOeZAhLhViRqto2vXGTs6uabXAbOh0xRGjKdxvIkNovvJ6ZNqMnkUmFbm5XTTa9buCbBTuvo2zbACDbtRqVQQ=="
+DATABASE_NAME = "talentscoutdatadb"
+CONTAINER_NAME = "jobs"
+
+# Azure OpenAI settings
+# AZURE_OPENAI_ENDPOINT = "https://<your-openai-endpoint>.openai.azure.com/"
+# AZURE_OPENAI_KEY = "<your-openai-key>"
+AZURE_DEPLOYMENT_NAME = "gpt-4o"
+AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
+AZURE_OPENAI_KEY = os.getenv("AZURE_OPENAI_KEY")
+
+# Initialize Cosmos client
+client = CosmosClient(COSMOS_ENDPOINT, COSMOS_KEY)
+database = client.create_database_if_not_exists(id=DATABASE_NAME)
+container = database.create_container_if_not_exists(
+    id=CONTAINER_NAME, partition_key=PartitionKey(path="/jobid")
+)
+
+# Setup Azure OpenAI
+
+@app.post("/apply")
+async def apply_to_job(
+    name: str = Form(...),
+    email: str = Form(...),
+    job_id: str = Form(...),
+    resume: UploadFile = None
+):
+    application_id = str(uuid.uuid4())
+
+    # Read PDF content
+    resume_bytes = await resume.read()
+    resume_text = extract_text_from_pdf(resume_bytes)
+    extracted_info = "abcdefgg"
+    # extracted_info = await extract_info_with_openai(resume_text)
+    item = {
+        "id": application_id,
+        "job_id": job_id,
+        "name": name,
+        "email": email,
+        "resume_text": resume_text,
+        "extracted_info": resume_text
+    }
+    container.create_item(body=item)
+
+    return JSONResponse(content={"application_id": application_id, "message": "Application submitted successfully!"})
+
+
+class AzureResumeAnalysisAgent:
+    def __init__(self, endpoint, api_key, deployment, api_version="2024-12-01-preview"):
+        self.client = openai.ChatCompletion  # Assuming you're using OpenAI's Azure-based client
+        self.deployment = deployment
+        self.api_version = api_version
+        self.api_base = endpoint
+        self.api_key = api_key
+
+    async def extract_info_with_openai(self, resume_text: str):
+        # Format the resume content into a structured prompt for analysis
+        prompt = f"""
+        Extract key information from the following resume:
+        - Full Name
+        - Email
+        - Phone Number
+        - Skills
+        - Experience Summary
+
+        Resume:
+        {resume_text}
+        """
+
+        # Making the API call to Azure OpenAI to extract relevant info from the resume
+        try:
+            response = self.client.create(
+                model=self.deployment,  # Azure deployment name
+                messages=[
+                    {"role": "system", "content": "You are an expert resume parser."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.2,
+                max_tokens=500,
+                response_format="json",
+            )
+
+            # Extracting the response from the API call
+            completion_tokens = response['usage']
+            print("Completion Tokens:", completion_tokens)
+
+            # Return the extracted information from the resume
+            return response['choices'][0]['message']['content']
+        # except openai.error.OpenAIError as e:
+        #     raise Exception(f"OpenAI API error: {e}")
+        except Exception as e:
+            raise Exception(f"An unexpected error occurred: {e}")
+
+
+
+
+
 
 class AnalyzeRequest(BaseModel):
     session_id: str
 
 
-app = FastAPI()
+
 
 AZURE_CONNECTION_STRING = os.getenv("AZURE_CONNECTION_STRING")
 AZURE_CONTAINER_NAME = os.getenv("AZURE_CONTAINER_NAME")
@@ -162,18 +287,6 @@ Respond only in JSON format.
         print("Completion Tokens:", completion_tokens)
         return response.choices[0].message.content
 
-async def download_audio_from_azure(filename: str) -> str:
-    """Download the MP3 file from Azure Blob Storage and save to a temporary directory"""
-    try:
-        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-            file_path = temp_file.name  # Get the temporary file path
-            blob_client = container_client.get_blob_client(filename)
-            blob_data = blob_client.download_blob()
-            with open(file_path, "wb") as file:
-                file.write(blob_data.readall())
-            return file_path
-    except Exception as e:
-        raise Exception(f"Failed to download audio: {e}")
 
 import json
 @app.post("/generate_report/")
