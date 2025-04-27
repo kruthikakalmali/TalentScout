@@ -13,3 +13,7 @@ numpy
 python-dotenv==0.21.1
 starlette==0.26.1
 fastapi[all]
+azure-ai-generative
+whisper
+openai-whisper
+azure-ai-ml==1.14.0

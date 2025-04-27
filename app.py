@@ -6,12 +6,11 @@ from fastapi.middleware.cors import CORSMiddleware
 import tempfile
 from azure.storage.blob import BlobServiceClient
 import uuid
-from openai import AzureOpenAI
+from openai import AzureOpenAI,AsyncAzureOpenAI
 import os
 import librosa
 import numpy as np
 from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
-import tempfile
 from pydantic import BaseModel
 import azure.cosmos
 class AnalyzeRequest(BaseModel):
@@ -154,9 +153,6 @@ class AzureResumeAnalysisAgent:
         #     raise Exception(f"OpenAI API error: {e}")
         except Exception as e:
             raise Exception(f"An unexpected error occurred: {e}")
-
-
-
 
 
 
@@ -405,12 +401,6 @@ import openai
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-# Set Azure OpenAI configurations
-# TODO: The 'openai.api_base' option isn't read in the client API. You will need to pass it when you instantiate the client, e.g. 'OpenAI(base_url=AZURE_OPENAI_ENDPOINT)'
-# openai.api_base = AZURE_OPENAI_ENDPOINT  # Replace with your Azure OpenAI endpoint
-  # Replace with your Azure OpenAI key
-  # Version can change, check Azure docs
-
 
 class AgentRequest(BaseModel):
     query: str
@@ -475,3 +465,138 @@ async def recruiter_agent(request: AgentRequest):
         return JSONResponse(content={"response": agent_reply})
     else:
         return JSONResponse(status_code=500, content={"error": "Failed to generate a response."})
+
+
+live_adaptive_sessions = {}
+# from azure.ai.generative import AsyncOpenAI
+from typing import List, Dict
+
+class AdaptiveInterviewAgent:
+    def __init__(self, endpoint: str, api_key: str, deployment: str, job_description: str):
+        self.client = AsyncAzureOpenAI(
+            azure_endpoint=endpoint,
+            api_key=api_key,
+            azure_deployment=deployment,
+            api_version="2024-02-15-preview"
+        )
+        self.job_description = job_description
+        self.conversation: List[Dict[str, str]] = []  # stores full Q&A history
+
+    async def generate_first_question(self):
+        prompt = f"""You are an expert interviewer. Based on the following Job Description:
+
+{self.job_description}
+
+Generate the first interview question that assesses the candidate's basic fit and understanding. Be concise."""
+        response = await self.client.chat.completions.create(
+            model="gpt-4o",
+            temperature=0.7,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        first_question = response.choices[0].message.content.strip()
+        self.conversation.append({"role": "assistant", "content": first_question})
+        return first_question
+
+    async def generate_followup_question(self, candidate_answer: str):
+        self.conversation.append({"role": "user", "content": candidate_answer})
+
+        context_prompt = [
+            {"role": "system", "content": f"You are a professional recruiter conducting an adaptive interview based on this job description:\n{self.job_description}"},
+        ] + self.conversation + [
+            {"role": "user", "content": "Based on the candidate's last answer, generate the next interview question. If appropriate, dive deeper or increase difficulty slightly. Ask one concise question."}
+        ]
+
+        response = await self.client.chat.completions.create(
+            model="gpt-4o",
+            temperature=0.7,
+            messages=context_prompt
+        )
+        next_question = response.choices[0].message.content.strip()
+        self.conversation.append({"role": "assistant", "content": next_question})
+        return next_question
+
+    async def summarize_interview(self):
+        prompt = [
+            {"role": "system", "content": "You are a recruiter summarizing an interview."},
+            *self.conversation,
+            {"role": "user", "content": "Summarize the candidate's overall performance, strengths, and areas of improvement in a professional tone."}
+        ]
+
+        response = await self.client.chat.completions.create(
+            model="gpt-4o",
+            temperature=0.5,
+            messages=prompt
+        )
+        summary = response.choices[0].message.content.strip()
+        return summary
+
+
+
+class StartAdaptiveInterviewRequest(BaseModel):
+    candidate_name: str
+    job_description: str
+
+# Endpoint to create a new session
+@app.post("/create_session/")
+async def create_session(questions: list, description: str):
+    session_data = {
+        "questions": questions,
+        "description": description
+    }
+    session_id = store_session(session_data)  # Save session to Cosmos DB
+    return {"message": "Session created successfully", "session_id": session_id}
+
+# @app.post("/start_adaptive_interview")
+# async def start_adaptive_interview(request: StartAdaptiveInterviewRequest):
+#     session_id = str(uuid.uuid4())
+
+#     agent = AdaptiveInterviewAgent(
+#         endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+#         api_key=os.getenv("AZURE_OPENAI_KEY"),
+#         deployment="gpt-4o",
+#         job_description=request.job_description
+#     )
+
+#     first_question = await agent.generate_first_question()
+
+#     live_adaptive_sessions[session_id] = {
+#         "candidate_name": request.candidate_name,
+#         "agent": agent
+#     }
+#     print(live_adaptive_sessions)
+
+#     return {"session_id": session_id, "first_question": first_question}
+import whisper
+
+class StartAdaptiveInterviewRequest(BaseModel):
+    candidate_name: str
+    job_description: str
+    identity_id: str
+
+
+@app.post("/start_adaptive_interview")
+async def start_adaptive_interview(request: StartAdaptiveInterviewRequest):
+    session_id = "session"+str(uuid.uuid4())
+
+    agent = AdaptiveInterviewAgent(
+        endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+        api_key=os.getenv("AZURE_OPENAI_KEY"),
+        deployment="gpt-4o",
+        job_description=request.job_description
+    )
+
+    first_question = await agent.generate_first_question()
+
+    # Save session in Cosmos DB
+    item = {
+        "id": session_id,
+        "questions": [first_question],
+        "sessionid": session_id,
+        "type": "session",
+        "job_description": request.job_description,
+        "idenitity_id": request.identity_id
+    }
+    container.create_item(body=item)
+
+    return {"session_id": session_id, "first_question": first_question}
+
