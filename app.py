@@ -1,6 +1,6 @@
 
 
-from fastapi import FastAPI, UploadFile, File,HTTPException
+from fastapi import FastAPI, UploadFile, File,HTTPException,Query
 from fastapi.responses import StreamingResponse
 import tempfile
 from azure.storage.blob import BlobServiceClient
@@ -60,7 +60,7 @@ container = database.create_container_if_not_exists(
 
 # Setup Azure OpenAI
 
-@app.post("/apply")
+@app.post("/apply_to_job")
 async def apply_to_job(
     name: str = Form(...),
     email: str = Form(...),
@@ -311,7 +311,6 @@ from pydantic import BaseModel
 from uuid import uuid4
 from starlette.responses import JSONResponse
 
-app = FastAPI()
 
 # Example schema for Job (you can expand this based on your DB model)
 class Job(BaseModel):
@@ -339,3 +338,35 @@ async def create_job(
     container.create_item(body=job_item)  # Save to DB container
 
     return JSONResponse(content={"job_id": job_id, "message": "Job created successfully!"})
+
+@app.get("/get_applications_by_job_id")
+async def get_applications(job_id: str = Query(..., description="Get all job ids")):
+    # Query the Cosmos DB for documents with type = "application" and the given job_id
+    query = f"SELECT * FROM c WHERE c.type = 'applicant' AND c.job_id = '{job_id}'"
+    
+    items = []
+    # Execute the query
+    for item in container.query_items(query=query, enable_cross_partition_query=True):
+        items.append(item)
+    
+    # Return the results
+    if items:
+        return JSONResponse(content={"applications": items})
+    else:
+        return JSONResponse(content={"message": "No applications found for the given job_id."})
+
+@app.get("/get_all_jobs")
+async def get_applications(job_id: str = Query(..., description="The job ID to filter applications")):
+    # Query the Cosmos DB for documents with type = "application" and the given job_id
+    query = f"SELECT * FROM c WHERE c.type = 'job'"
+    
+    items = []
+    # Execute the query
+    for item in container.query_items(query=query, enable_cross_partition_query=True):
+        items.append(item)
+    
+    # Return the results
+    if items:
+        return JSONResponse(content={"jobs": items})
+    else:
+        return JSONResponse(content={"message": "No jobs found."})
