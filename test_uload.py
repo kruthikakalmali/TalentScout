@@ -25,6 +25,8 @@
 import requests
 
 url = "http://localhost:8000/upload/"
+# url = "https://talentscout-production.up.railway.app/upload/"
+
 session_id = "session-456"
 file_path = "interview1.mp3"
 
@@ -38,5 +40,4 @@ with open(file_path, "rb") as f:
     response = requests.post(url, params=params, files=files)
 
 print(response.json())
-
 print(response.json())

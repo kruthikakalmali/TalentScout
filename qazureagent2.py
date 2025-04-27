@@ -1,54 +1,14 @@
-
-
-from fastapi import FastAPI, UploadFile, File,HTTPException
-from fastapi.responses import StreamingResponse
-import tempfile
-from azure.storage.blob import BlobServiceClient
-import uuid
-from openai import AzureOpenAI
 import os
 import librosa
 import numpy as np
+import uuid
+import asyncio
 from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
+from fastapi.responses import StreamingResponse
 import tempfile
-from pydantic import BaseModel
-
-class AnalyzeRequest(BaseModel):
-    session_id: str
-
-
-app = FastAPI()
-
-AZURE_CONNECTION_STRING = os.getenv("AZURE_CONNECTION_STRING")
-AZURE_CONTAINER_NAME = os.getenv("AZURE_CONTAINER_NAME")
+from openai import AzureOpenAI
 AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
 AZURE_OPENAI_KEY = os.getenv("AZURE_OPENAI_KEY")
-connect_str = os.getenv("AZURE_CONNECTION_STRING")
-container_name = os.getenv("AZURE_CONTAINER_NAME")
-blob_service_client = BlobServiceClient.from_connection_string(connect_str)
-container_client = blob_service_client.get_container_client(container_name)
-
-@app.post("/upload/")
-async def upload_audio(session_id: str, audio_file: UploadFile = File(...)):
-    try:
-        file_extension = audio_file.filename.split(".")[-1]
-        unique_filename = f"{session_id}_{uuid.uuid4()}.{file_extension}"
-        blob_client = container_client.get_blob_client('interview1.mp3')
-        blob_client = container_client.get_blob_client(unique_filename)
-        file_data = await audio_file.read()
-        blob_client.upload_blob(file_data, overwrite=True)
-        blob_url = blob_client.url
-        analysis_result = f"Simulated transcript for file: {unique_filename}"
-
-        return {
-            "message": "Audio uploaded successfully to Azure!",
-            "blob_url": blob_url,
-            "analysis": analysis_result
-        }
-
-    except Exception as e:
-        return {"error": str(e)}
-
 
 class AzureVoiceAnalysisAgent:
     def __init__(self, endpoint, api_key, deployment, api_version="2024-12-01-preview"):
@@ -61,9 +21,13 @@ class AzureVoiceAnalysisAgent:
 
     def extract_audio_features(self, file_path: str):
         y, sr = librosa.load(file_path, sr=None)
+
+        # Extract MFCC features
         mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=20)
+        # Extract pitch and magnitude
         pitches, magnitudes = librosa.piptrack(y=y, sr=sr)
         pitch = np.mean(pitches[pitches > 0]) if np.any(pitches > 0) else 0
+        # Extract energy (RMS)
         energy = np.mean(librosa.feature.rms(y=y))
 
         return {
@@ -73,6 +37,7 @@ class AzureVoiceAnalysisAgent:
         }
 
     async def analyze_voice(self, file_path: str):
+        # Extract features from the audio file
         features = self.extract_audio_features(file_path)
 
         prompt = f"""
@@ -158,13 +123,21 @@ Respond only in JSON format.
             max_tokens=500,
             response_format={"type": "json_object"},
         )
-        completion_tokens = response.usage
-        print("Completion Tokens:", completion_tokens)
+
+        # Parse and return response
         return response.choices[0].message.content
+
+
+# Azure Blob Storage setup
+connect_str =  os.getenv("AZURE_CONNECTION_STRING")
+container_name =  os.getenv("AZURE_CONTAINER_NAME")
+blob_service_client = BlobServiceClient.from_connection_string(connect_str)
+container_client = blob_service_client.get_container_client(container_name)
 
 async def download_audio_from_azure(filename: str) -> str:
     """Download the MP3 file from Azure Blob Storage and save to a temporary directory"""
     try:
+        # Create a temporary file to save the audio
         with tempfile.NamedTemporaryFile(delete=False) as temp_file:
             file_path = temp_file.name  # Get the temporary file path
             blob_client = container_client.get_blob_client(filename)
@@ -175,18 +148,22 @@ async def download_audio_from_azure(filename: str) -> str:
     except Exception as e:
         raise Exception(f"Failed to download audio: {e}")
 
-import json
-@app.post("/generate_report/")
-async def generate_report(request: AnalyzeRequest):
-    try:
-        file_path = await download_audio_from_azure(request.session_id)
-        agent = AzureVoiceAnalysisAgent(
-            endpoint=AZURE_OPENAI_ENDPOINT,
-            api_key=AZURE_OPENAI_KEY,
-            deployment="gpt-4o"
-        )
-        report = await agent.analyze_voice(file_path)
-        return {"report": report}
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error analyzing audio: {str(e)}")
+async def main():
+    file_name = "interview1.mp3"
+    # Step 1: Download file from Azure Blob Storage to a temporary file
+    file_path = await download_audio_from_azure("session-456_692a156b-6e9e-46f5-aab5-2c841cd76e61.mp3")
+    
+    # Step 2: Create the agent and analyze the audio file
+    agent = AzureVoiceAnalysisAgent(
+        endpoint=AZURE_OPENAI_ENDPOINT,
+        api_key=AZURE_OPENAI_KEY,
+        deployment="gpt-4o"
+    )
+    report = await agent.analyze_voice(file_path)
+    
+    print(report)
+
+
+# Run the main function
+asyncio.run(main())

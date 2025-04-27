@@ -5,3 +5,5 @@ python-multipart
 azure-storage-blob
 pydantic
 requests
+librosa
+openai
