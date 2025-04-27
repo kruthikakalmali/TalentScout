@@ -51,9 +51,9 @@ const QuestionHistory: React.FC<QuestionHistoryProps> = ({ questionsList }) => (
             overflow="hidden"
           >
             <AccordionButton
-              bg="whiteAlpha.50"
-              _hover={{ bg: "whiteAlpha.200" }}
-              _expanded={{ bg: "whiteAlpha.300" }}
+              bg="#2d3748"
+              _hover={{ bg: "#384151" }}
+              _expanded={{ bg: "#384151" }}
               px={3}
               py={3}
             >
@@ -72,7 +72,7 @@ const QuestionHistory: React.FC<QuestionHistoryProps> = ({ questionsList }) => (
               pb={4}
               maxH="300px"
               overflowY="auto"
-              bg="whiteAlpha.200"
+              bg="#293241"
             >
               <Text color="whiteAlpha.900" whiteSpace="pre-wrap">
                 {answer}

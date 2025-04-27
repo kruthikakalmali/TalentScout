@@ -9,9 +9,7 @@ const QuestionBox: React.FC<QuestionBoxProps> = ({ question }) => (
   <Box
     mb={6}
     p={6}
-    bg="whiteAlpha.100"
-    border="1px solid"
-    borderColor="whiteAlpha.200"
+    bg="#2d3748"
     borderRadius="md"
     boxShadow="sm"
     w="100%"

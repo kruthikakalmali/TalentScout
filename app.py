@@ -1,5 +1,6 @@
 
 
+from typing import Optional
 from fastapi import FastAPI, UploadFile, Form, File,HTTPException,Query
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -338,7 +339,8 @@ class Job(BaseModel):
 # POST endpoint to create a job
 @app.post("/create_job")
 async def create_job(
-    job_id: str = Form(...),
+    job_id: Optional[str] = Form(None),
+    job_role: str = Form(...),
     description: str = Form(...)
 ):
     # Generate a unique job ID if not provided (or use the one from request)
@@ -348,6 +350,7 @@ async def create_job(
     job_item = {
         "id": job_id,
         "job_id": job_id,
+        "job_role": job_role,
         "description": description,
         "type": "job"
     }
