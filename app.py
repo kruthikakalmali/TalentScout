@@ -45,8 +45,8 @@ import os
 app = FastAPI()
 
 # Azure Storage Connection Settings
-AZURE_CONNECTION_STRING = "DefaultEndpointsProtocol=https;AccountName=talentscoutdb;AccountKey=sxGmenIcsuV4Jv0025aqQX61Ciddcn87PB3k043BdR2qjXCQktKm6S0FxjCad3JPsEzIFcKa8DeV+AStW31FQw==;EndpointSuffix=core.windows.net"
-AZURE_CONTAINER_NAME = "audiostorage"
+AZURE_CONNECTION_STRING = os.getenv("AZURE_CONNECTION_STRING")
+AZURE_CONTAINER_NAME = os.getenv("AZURE_CONTAINER_NAME")
 
 blob_service_client = BlobServiceClient.from_connection_string(AZURE_CONNECTION_STRING)
 container_client = blob_service_client.get_container_client(AZURE_CONTAINER_NAME)

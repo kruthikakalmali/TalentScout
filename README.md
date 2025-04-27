@@ -1,1 +1,2 @@
-dsxc cwdscd
+uvicorn app:app --reload
+
