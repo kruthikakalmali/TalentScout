@@ -22,7 +22,8 @@ from azure.cosmos import CosmosClient,PartitionKey
 from pdfutility import extract_text_from_pdf
 import random
 
-# from downloadaudiofromazure import download_audio_from_azure
+from sklearn.metrics.pairwise import cosine_similarity
+import requests
 from fastapi.middleware.cors import CORSMiddleware
 app = FastAPI()
 
@@ -740,33 +741,9 @@ async def send_email():
 
 
 
-from sklearn.metrics.pairwise import cosine_similarity
-
-
-# --- Helper Functions ---
-
-# async def get_embedding(text):
-#     """Get embedding using Azure OpenAI embeddings."""
-#     response = openai.Embedding.create(
-#         input=text,
-#         engine="text-embedding-ada-002"
-#     )
-#     return np.array(response['data'][0]['embedding'])
-# openapiclient = openai.OpenAI()
-# from openai import OpenAI
-# # from azure.ai.openai import OpenAIClient
-# from azure.core.credentials import AzureKeyCredential
-# from dotenv import load_dotenv
-import requests
-# azure_api_key = os.getenv("AZURE_OPENAI_API_KEY")
-# azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
-# azure_api_version = os.getenv("AZURE_OPENAI_API_VERSION")
 api_key = "81ClR2uk3VJCLU3i78xpXmLDRPjV4BtlUXOMjP4kgHy4j36leVzsJQQJ99BDACYeBjFXJ3w3AAABACOGB5ka"
 endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
 api_version = os.getenv("AZURE_OPENAI_API_VERSION")
-
-# openapiclient = OpenAI(api_key="81ClR2uk3VJCLU3i78xpXmLDRPjV4BtlUXOMjP4kgHy4j36leVzsJQQJ99BDACYeBjFXJ3w3AAABACOGB5ka")
-# openapiclient = OpenAIClient(azure_endpoint, AzureKeyCredential(azure_api_key))
 url = f"https://vector1.openai.azure.com/openai/deployments/text-embedding-ada-002/embeddings?api-version=2023-05-15"
 
 headers = {
@@ -787,39 +764,6 @@ def get_embedding(text):
 
 
 
-# async def score_resume_with_llm(jd_text, resume_text):
-#     """Score resume vs JD using LLM structured prompt."""
-#     prompt = f"""
-# You are a professional recruiter.
-
-# Given the following Job Description and Resume, score the resume:
-
-# Job Description:
-# {jd_text}
-
-# Candidate Resume:
-# {resume_text}
-
-# Evaluate and return JSON with:
-# - skill_match (0-10)
-# - experience_relevance (0-10)
-# - cultural_fit_guess (0-10)
-# - strengths (text)
-# - potential_gaps (text)
-# - overall_fit_summary (text)
-# """
-#     completion = openai.ChatCompletion.create(
-#         model="gpt-4-turbo",
-#         messages=[{"role": "user", "content": prompt}],
-#         temperature=0.2
-#     )
-#     content = completion['choices'][0]['message']['content']
-#     try:
-#         result = eval(content)  # Assuming response is structured JSON text
-#         return result
-#     except Exception:
-#         # Handle bad outputs gracefully
-#         return None
 class ResumeScorer:
     def __init__(self, endpoint, api_key, deployment, api_version="2024-12-01-preview"):
         self.client = AsyncAzureOpenAI(
@@ -829,21 +773,7 @@ class ResumeScorer:
         )
         self.deployment = deployment
 
-    # # def extract_audio_features(self, file_path: str):
-    #     y, sr = librosa.load(file_path, sr=None)
-    #     mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=20)
-    #     pitches, magnitudes = librosa.piptrack(y=y, sr=sr)
-    #     pitch = np.mean(pitches[pitches > 0]) if np.any(pitches > 0) else 0
-    #     energy = np.mean(librosa.feature.rms(y=y))
-
-    #     return {
-    #         "mfcc_std": float(np.std(mfcc)),
-    #         "pitch_mean": float(pitch),
-    #         "energy_mean": float(energy),
-    #     }
-
     async def score_resume(self, jd_text: str,resume_text: str):
-        # features = self.extract_audio_features(file_path)
         prompt = f"""
 You are a professional recruiter.
 
@@ -870,14 +800,11 @@ Evaluate and return JSON with:
         temperature=0.2,
             response_format={"type": "json_object"}
         )
-        # completion_tokens = response.usage
-        
-        # content = response['choices'][0]['message']['content']
         content = response.choices[0].message.content
         print(content)
         try:
-            report = json.loads(content)  # Parse JSON
-            return report   # <-- ADD THIS LINE
+            report = json.loads(content)
+            return report
         except Exception as e:
             print("Error parsing LLM response:", e)
             return None
