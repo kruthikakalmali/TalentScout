@@ -17,3 +17,4 @@ azure-ai-generative
 whisper
 openai-whisper
 azure-ai-ml==1.14.0
+ffmpeg
