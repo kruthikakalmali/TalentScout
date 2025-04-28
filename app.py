@@ -47,6 +47,7 @@ from AzureResumeAnalysisAgent import AzureResumeAnalysisAgent
 from downloadaudiofromazure import download_audio_from_azure
 from AnalyzeRequest import AnalyzeRequest
 from AzureVoiceAnalysisAgent import AzureVoiceAnalysisAgent
+from AdaptiveInterviewAgent import AdaptiveInterviewAgent,StartAdaptiveInterviewRequest
 from utils import convert_webm_to_mp3
 app = FastAPI()
 
@@ -315,70 +316,6 @@ live_adaptive_sessions = {}
 # from azure.ai.generative import AsyncOpenAI
 
 
-class AdaptiveInterviewAgent:
-    def __init__(self, endpoint: str, api_key: str, deployment: str, job_description: str):
-        self.client = AsyncAzureOpenAI(
-            azure_endpoint=endpoint,
-            api_key=api_key,
-            azure_deployment=deployment,
-            api_version="2024-02-15-preview"
-        )
-        self.job_description = job_description
-        self.conversation: List[Dict[str, str]] = []  # stores full Q&A history
-
-    async def generate_first_question(self):
-        prompt = f"""You are an expert interviewer. Based on the following Job Description:
-
-{self.job_description}
-
-Generate the first interview question that assesses the candidate's basic fit and understanding. Be concise."""
-        response = await self.client.chat.completions.create(
-            model="gpt-4o",
-            temperature=0.7,
-            messages=[{"role": "user", "content": prompt}]
-        )
-        first_question = response.choices[0].message.content.strip()
-        self.conversation.append({"role": "assistant", "content": first_question})
-        return first_question
-
-    async def generate_followup_question(self, candidate_answer: str):
-        self.conversation.append({"role": "user", "content": candidate_answer})
-
-        context_prompt = [
-            {"role": "system", "content": f"You are a professional recruiter conducting an adaptive interview based on this job description:\n{self.job_description}"},
-        ] + self.conversation + [
-            {"role": "user", "content": "Based on the candidate's last answer, generate the next interview question. If appropriate, dive deeper or increase difficulty slightly. Ask one concise question."}
-        ]
-
-        response = await self.client.chat.completions.create(
-            model="gpt-4o",
-            temperature=0.7,
-            messages=context_prompt
-        )
-        next_question = response.choices[0].message.content.strip()
-        self.conversation.append({"role": "assistant", "content": next_question})
-        return next_question
-
-    async def summarize_interview(self):
-        prompt = [
-            {"role": "system", "content": "You are a recruiter summarizing an interview."},
-            *self.conversation,
-            {"role": "user", "content": "Summarize the candidate's overall performance, strengths, and areas of improvement in a professional tone."}
-        ]
-
-        response = await self.client.chat.completions.create(
-            model="gpt-4o",
-            temperature=0.5,
-            messages=prompt
-        )
-        summary = response.choices[0].message.content.strip()
-        return summary
-
-
-
-class StartAdaptiveInterviewRequest(BaseModel):
-    candidate_name: str
-    job_description: str
 
 # Endpoint to create a new session
 @app.post("/create_session/")
