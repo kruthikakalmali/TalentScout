@@ -11,6 +11,8 @@ from openai import AzureOpenAI,AsyncAzureOpenAI
 import os
 import librosa
 import numpy as np
+import subprocess
+import ffmpeg
 from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
 from pydantic import BaseModel
 import azure.cosmos
@@ -162,15 +164,72 @@ container_name = os.getenv("AZURE_CONTAINER_NAME")
 blob_service_client = BlobServiceClient.from_connection_string(connect_str)
 container_client = blob_service_client.get_container_client(container_name)
 
+async def convert_webm_to_mp3(file_data: bytes) -> bytes:
+    """Converts WebM audio bytes to MP3 bytes using FFmpeg."""
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as temp_input:
+        temp_input.write(file_data)
+        temp_input.flush()
+        input_path = temp_input.name
+
+    output_path = input_path.replace(".webm", ".mp3")
+
+    try:
+        # FFmpeg command to convert
+        subprocess.run(
+            ["ffmpeg", "-i", input_path, "-f", "mp3", "-y", output_path],
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
+
+        with open(output_path, "rb") as f:
+            mp3_data = f.read()
+
+        return mp3_data
+
+    finally:
+        # Always clean up temp files
+        os.unlink(input_path)
+        if os.path.exists(output_path):
+            os.unlink(output_path)
+
+# @app.post("/upload/")
+# async def upload_audio(session_id: str = Form(...), audio_file: UploadFile = File(...)):
+#     try:
+#         file_extension = audio_file.filename.split(".")[-1]
+#         unique_filename = f"{session_id}_{uuid.uuid4()}.{file_extension}"
+#         blob_client = container_client.get_blob_client('interview1.mp3')
+#         blob_client = container_client.get_blob_client(unique_filename)
+#         file_data = await audio_file.read()
+#         blob_client.upload_blob(file_data, overwrite=True)
+#         blob_url = blob_client.url
+#         analysis_result = f"Simulated transcript for file: {unique_filename}"
+
+#         return {
+#             "message": "Audio uploaded successfully to Azure!",
+#             "blob_url": blob_url,
+#             "analysis": analysis_result,
+#             "filename": unique_filename
+#         }
+
+#     except Exception as e:
+#         return {"error": str(e)}
+
 @app.post("/upload/")
 async def upload_audio(session_id: str = Form(...), audio_file: UploadFile = File(...)):
     try:
-        file_extension = audio_file.filename.split(".")[-1]
-        unique_filename = f"{session_id}_{uuid.uuid4()}.{file_extension}"
-        blob_client = container_client.get_blob_client('interview1.mp3')
-        blob_client = container_client.get_blob_client(unique_filename)
         file_data = await audio_file.read()
-        blob_client.upload_blob(file_data, overwrite=True)
+
+        # Convert WebM to MP3
+        mp3_data = await convert_webm_to_mp3(file_data)
+
+        # Create a unique filename
+        unique_filename = f"{session_id}_{uuid.uuid4()}.mp3"
+        blob_client = container_client.get_blob_client(unique_filename)
+
+        # Upload mp3 data to Azure
+        blob_client.upload_blob(mp3_data, overwrite=True)
+
         blob_url = blob_client.url
         analysis_result = f"Simulated transcript for file: {unique_filename}"
 
