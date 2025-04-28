@@ -21,10 +21,30 @@ class AnalyzeRequest(BaseModel):
 from azure.cosmos import CosmosClient,PartitionKey
 from pdfutility import extract_text_from_pdf
 import random
-
+import asyncio
 from sklearn.metrics.pairwise import cosine_similarity
 import requests
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, UploadFile, Form
+from fastapi.responses import JSONResponse
+import uuid
+import openai
+import os
+from fastapi import FastAPI, Form
+from pydantic import BaseModel
+from uuid import uuid4
+from starlette.responses import JSONResponse
+import openai
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
+import json
+from fastapi.responses import JSONResponse
+from typing import List, Dict
+import whisper
+from azure.communication.email import EmailClient
+from ResumeScorer import ResumeScorer
+from AzureResumeAnalysisAgent import AzureResumeAnalysisAgent
+from downloadaudiofromazure import download_audio_from_azure
 app = FastAPI()
 
 app.add_middleware(
@@ -47,12 +67,7 @@ container_name = os.getenv("AZURE_CONTAINER_NAME")
 
 
 
-from fastapi import FastAPI, UploadFile, Form
-from fastapi.responses import JSONResponse
-import uuid
-# from azure.cosmos import CosmosClient, PartitionKey
-import openai  # Azure OpenAI
-import os
+
 
 # Cosmos DB settings
 COSMOS_ENDPOINT = "https://talentscoutdbfordata.documents.azure.com:443/"
@@ -104,51 +119,51 @@ async def apply_to_job(
     return JSONResponse(content={"application_id": application_id, "message": "Application submitted successfully!"})
 
 
-class AzureResumeAnalysisAgent:
-    def __init__(self, endpoint, api_key, deployment, api_version="2024-12-01-preview"):
-        self.client = openai.ChatCompletion  # Assuming you're using OpenAI's Azure-based client
-        self.deployment = deployment
-        self.api_version = api_version
-        self.api_base = endpoint
-        self.api_key = api_key
+# class AzureResumeAnalysisAgent:
+#     def __init__(self, endpoint, api_key, deployment, api_version="2024-12-01-preview"):
+#         self.client = openai.ChatCompletion  # Assuming you're using OpenAI's Azure-based client
+#         self.deployment = deployment
+#         self.api_version = api_version
+#         self.api_base = endpoint
+#         self.api_key = api_key
 
-    async def extract_info_with_openai(self, resume_text: str):
-        # Format the resume content into a structured prompt for analysis
-        prompt = f"""
-        Extract key information from the following resume:
-        - Full Name
-        - Email
-        - Phone Number
-        - Skills
-        - Experience Summary
+#     async def extract_info_with_openai(self, resume_text: str):
+#         # Format the resume content into a structured prompt for analysis
+#         prompt = f"""
+#         Extract key information from the following resume:
+#         - Full Name
+#         - Email
+#         - Phone Number
+#         - Skills
+#         - Experience Summary
 
-        Resume:
-        {resume_text}
-        """
+#         Resume:
+#         {resume_text}
+#         """
 
-        # Making the API call to Azure OpenAI to extract relevant info from the resume
-        try:
-            response = self.client.create(
-                model=self.deployment,  # Azure deployment name
-                messages=[
-                    {"role": "system", "content": "You are an expert resume parser."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.2,
-                max_tokens=500,
-                response_format="json",
-            )
+#         # Making the API call to Azure OpenAI to extract relevant info from the resume
+#         try:
+#             response = self.client.create(
+#                 model=self.deployment,  # Azure deployment name
+#                 messages=[
+#                     {"role": "system", "content": "You are an expert resume parser."},
+#                     {"role": "user", "content": prompt}
+#                 ],
+#                 temperature=0.2,
+#                 max_tokens=500,
+#                 response_format="json",
+#             )
 
-            # Extracting the response from the API call
-            completion_tokens = response['usage']
-            print("Completion Tokens:", completion_tokens)
+#             # Extracting the response from the API call
+#             completion_tokens = response['usage']
+#             print("Completion Tokens:", completion_tokens)
 
-            # Return the extracted information from the resume
-            return response['choices'][0]['message']['content']
-        # except openai.error.OpenAIError as e:
-        #     raise Exception(f"OpenAI API error: {e}")
-        except Exception as e:
-            raise Exception(f"An unexpected error occurred: {e}")
+#             # Return the extracted information from the resume
+#             return response['choices'][0]['message']['content']
+#         # except openai.error.OpenAIError as e:
+#         #     raise Exception(f"OpenAI API error: {e}")
+#         except Exception as e:
+#             raise Exception(f"An unexpected error occurred: {e}")
 
 
 
@@ -362,7 +377,7 @@ Respond only in JSON format.
         return response.choices[0].message.content
 
 
-import json
+
 @app.post("/generate_report/")
 async def generate_report(request: AnalyzeRequest):
     try:
@@ -379,10 +394,6 @@ async def generate_report(request: AnalyzeRequest):
         raise HTTPException(status_code=500, detail=f"Error analyzing audio: {str(e)}")
 
 
-from fastapi import FastAPI, Form
-from pydantic import BaseModel
-from uuid import uuid4
-from starlette.responses import JSONResponse
 
 
 # Example schema for Job (you can expand this based on your DB model)
@@ -449,16 +460,13 @@ async def get_all_jobs():
         return JSONResponse(content={"message": "No jobs found."})
 
 
-from fastapi.responses import JSONResponse
+
 
 # === Define request body model ===
 class AgentRequest(BaseModel):
     query: str
 
 
-import openai
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel
 
 
 class AgentRequest(BaseModel):
@@ -528,7 +536,7 @@ async def recruiter_agent(request: AgentRequest):
 
 live_adaptive_sessions = {}
 # from azure.ai.generative import AsyncOpenAI
-from typing import List, Dict
+
 
 class AdaptiveInterviewAgent:
     def __init__(self, endpoint: str, api_key: str, deployment: str, job_description: str):
@@ -605,7 +613,7 @@ async def create_session(questions: list, description: str):
     session_id = store_session(session_data)  # Save session to Cosmos DB
     return {"message": "Session created successfully", "session_id": session_id}
 
-import whisper
+
 class StartAdaptiveInterviewRequest(BaseModel):
     candidate_name: str
     job_description: str
@@ -677,7 +685,7 @@ async def submit_adaptive_response(session_id: str = Form(...), audio_response: 
     container.replace_item(item=items[0], body=items[0])
 
     return {"next_question": next_question}
-from azure.communication.email import EmailClient
+
 # from azure.communication.email import EmailContent, EmailAddress, EmailMessage
 
 
@@ -764,52 +772,8 @@ def get_embedding(text):
 
 
 
-class ResumeScorer:
-    def __init__(self, endpoint, api_key, deployment, api_version="2024-12-01-preview"):
-        self.client = AsyncAzureOpenAI(
-            api_version=api_version,
-            azure_endpoint=endpoint,
-            api_key=api_key,
-        )
-        self.deployment = deployment
 
-    async def score_resume(self, jd_text: str,resume_text: str):
-        prompt = f"""
-You are a professional recruiter.
 
-Given the following Job Description and Resume, score the resume:
-
-Job Description:
-{jd_text}
-
-Candidate Resume:
-{resume_text}
-
-Evaluate and return JSON with:
-- skill_match (0-10)
-- experience_relevance (0-10)
-- cultural_fit_guess (0-10)
-- strengths (text)
-- potential_gaps (text)
-- overall_fit_summary (text)
-"""
-
-        response = await self.client.chat.completions.create(
-        model="gpt-4-turbo",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.2,
-            response_format={"type": "json_object"}
-        )
-        content = response.choices[0].message.content
-        print(content)
-        try:
-            report = json.loads(content)
-            return report
-        except Exception as e:
-            print("Error parsing LLM response:", e)
-            return None
-
-import asyncio
 
 @app.get("/get_top_applications_by_job_id")
 async def get_top_applications(job_id: str = Query(..., description="Get all job ids")):
