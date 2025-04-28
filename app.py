@@ -18,7 +18,7 @@ class AnalyzeRequest(BaseModel):
     session_id: str
 from azure.cosmos import CosmosClient,PartitionKey
 from pdfutility import extract_text_from_pdf
-from downloadaudiofromazure import download_audio_from_azure
+# from downloadaudiofromazure import download_audio_from_azure
 from fastapi.middleware.cors import CORSMiddleware
 app = FastAPI()
 
@@ -37,8 +37,8 @@ AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
 AZURE_OPENAI_KEY = os.getenv("AZURE_OPENAI_KEY")
 connect_str = os.getenv("AZURE_CONNECTION_STRING")
 container_name = os.getenv("AZURE_CONTAINER_NAME")
-blob_service_client = BlobServiceClient.from_connection_string(connect_str)
-container_client = blob_service_client.get_container_client(container_name)
+# blob_service_client = BlobServiceClient.from_connection_string(connect_str)
+# container_client = blob_service_client.get_container_client(container_name)
 
 
 
@@ -159,30 +159,30 @@ AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
 AZURE_OPENAI_KEY = os.getenv("AZURE_OPENAI_KEY")
 connect_str = os.getenv("AZURE_CONNECTION_STRING")
 container_name = os.getenv("AZURE_CONTAINER_NAME")
-blob_service_client = BlobServiceClient.from_connection_string(connect_str)
-container_client = blob_service_client.get_container_client(container_name)
+# blob_service_client = BlobServiceClient.from_connection_string(connect_str)
+# container_client = blob_service_client.get_container_client(container_name)
 
-@app.post("/upload/")
-async def upload_audio(session_id: str = Form(...), audio_file: UploadFile = File(...)):
-    try:
-        file_extension = audio_file.filename.split(".")[-1]
-        unique_filename = f"{session_id}_{uuid.uuid4()}.{file_extension}"
-        blob_client = container_client.get_blob_client('interview1.mp3')
-        blob_client = container_client.get_blob_client(unique_filename)
-        file_data = await audio_file.read()
-        blob_client.upload_blob(file_data, overwrite=True)
-        blob_url = blob_client.url
-        analysis_result = f"Simulated transcript for file: {unique_filename}"
+# @app.post("/upload/")
+# async def upload_audio(session_id: str = Form(...), audio_file: UploadFile = File(...)):
+#     try:
+#         file_extension = audio_file.filename.split(".")[-1]
+#         unique_filename = f"{session_id}_{uuid.uuid4()}.{file_extension}"
+#         blob_client = container_client.get_blob_client('interview1.mp3')
+#         blob_client = container_client.get_blob_client(unique_filename)
+#         file_data = await audio_file.read()
+#         blob_client.upload_blob(file_data, overwrite=True)
+#         blob_url = blob_client.url
+#         analysis_result = f"Simulated transcript for file: {unique_filename}"
 
-        return {
-            "message": "Audio uploaded successfully to Azure!",
-            "blob_url": blob_url,
-            "analysis": analysis_result,
-            "filename": unique_filename
-        }
+#         return {
+#             "message": "Audio uploaded successfully to Azure!",
+#             "blob_url": blob_url,
+#             "analysis": analysis_result,
+#             "filename": unique_filename
+#         }
 
-    except Exception as e:
-        return {"error": str(e)}
+#     except Exception as e:
+#         return {"error": str(e)}
 
 
 class AzureVoiceAnalysisAgent:
@@ -331,7 +331,8 @@ class Job(BaseModel):
 async def create_job(
     job_id: Optional[str] = Form(None),
     job_role: str = Form(...),
-    description: str = Form(...)
+    description: str = Form(...),
+    job_title: str = Form(...),
 ):
     # Generate a unique job ID if not provided (or use the one from request)
     job_id = job_id or str(uuid4())
@@ -342,6 +343,7 @@ async def create_job(
         "job_id": job_id,
         "job_role": job_role,
         "description": description,
+        "job_title":job_title,
         "type": "job"
     }
 
@@ -539,27 +541,6 @@ async def create_session(questions: list, description: str):
     session_id = store_session(session_data)  # Save session to Cosmos DB
     return {"message": "Session created successfully", "session_id": session_id}
 
-# @app.post("/start_adaptive_interview")
-# async def start_adaptive_interview(request: StartAdaptiveInterviewRequest):
-#     session_id = str(uuid.uuid4())
-
-#     agent = AdaptiveInterviewAgent(
-#         endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
-#         api_key=os.getenv("AZURE_OPENAI_KEY"),
-#         deployment="gpt-4o",
-#         job_description=request.job_description
-#     )
-
-#     first_question = await agent.generate_first_question()
-
-#     live_adaptive_sessions[session_id] = {
-#         "candidate_name": request.candidate_name,
-#         "agent": agent
-#     }
-#     print(live_adaptive_sessions)
-
-#     return {"session_id": session_id, "first_question": first_question}
-# from openai.whisper import WhisperTranscriber
 import whisper
 class StartAdaptiveInterviewRequest(BaseModel):
     candidate_name: str
@@ -632,4 +613,287 @@ async def submit_adaptive_response(session_id: str = Form(...), audio_response: 
     container.replace_item(item=items[0], body=items[0])
 
     return {"next_question": next_question}
+from azure.communication.email import EmailClient
+# from azure.communication.email import EmailContent, EmailAddress, EmailMessage
+
+
+CONNECTION_STRING = "endpoint=https://talent-scout-communications.india.communication.azure.com/;accesskey=9qcnvbSEXGYg3cG5MnXca7zob0CIULNuyProAtkZcnFLgjhDf8drJQQJ99BDACULyCph2AV3AAAAAZCSZByy"
+
+# Sender email (must be verified in ACS)
+SENDER_EMAIL = "DoNotReply@0c9e4a27-5bc3-47b3-8206-cd4072e4d7cc.azurecomm.net"
+
+# Receiver email
+RECEIVER_EMAIL = "kruthikakalmali@gmail.com"
+OPENAI_API_KEY = AZURE_OPENAI_KEY
+# Initialize Email Client
+email_client = EmailClient.from_connection_string(CONNECTION_STRING)
+
+# Initialize FastAPI
+INTERVIEW_LINK = "https://talent-scout-teal.vercel.app/"
+@app.post("/send-email")
+async def send_email():
+    html_content = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
+        <div style="max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 10px;">
+            <h2 style="color: #4CAF50;">Interview Invitation</h2>
+            <p>Dear Candidate,</p>
+            <p>We are excited to invite you for an interview with us!</p>
+            <p>Please plan to take the interview within 48 hours of getting this invite</p>
+            <p>Role:</b> Software Developer</p>
+            <p>JobID:</b>J1234567</p>
+            <p>Please click the button below to join the interview:</p>
+            <p style="text-align: center;">
+                <a href="{INTERVIEW_LINK}" style="background-color: #4CAF50; color: white; padding: 14px 25px; text-align: center; text-decoration: none; display: inline-block; border-radius: 5px; font-size: 16px;">
+                    Join Interview
+                </a>
+            </p>
+            <p>Best regards,<br>TalentScout Team</p>
+        </div>
+    </body>
+    </html>
+    """
+
+    message = {
+        "senderAddress": SENDER_EMAIL,
+        "recipients": {
+            "to": [{"address": RECEIVER_EMAIL}]
+        },
+        "content": {
+            "subject": "You're Invited: Interview with TalentScout",
+            "html": html_content,
+            "plainText": "Dear Candidate, You are invited for an interview. Please check your email in a browser that supports HTML to see the invitation."
+        }
+    }
+
+    poller = email_client.begin_send(message)
+    result = poller.result()
+
+    return {"message": "Email sent successfully", "status": result}
+
+
+
+
+
+
+
+from sklearn.metrics.pairwise import cosine_similarity
+
+
+# --- Helper Functions ---
+
+# async def get_embedding(text):
+#     """Get embedding using Azure OpenAI embeddings."""
+#     response = openai.Embedding.create(
+#         input=text,
+#         engine="text-embedding-ada-002"
+#     )
+#     return np.array(response['data'][0]['embedding'])
+# openapiclient = openai.OpenAI()
+# from openai import OpenAI
+# # from azure.ai.openai import OpenAIClient
+# from azure.core.credentials import AzureKeyCredential
+# from dotenv import load_dotenv
+import requests
+# azure_api_key = os.getenv("AZURE_OPENAI_API_KEY")
+# azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+# azure_api_version = os.getenv("AZURE_OPENAI_API_VERSION")
+api_key = "81ClR2uk3VJCLU3i78xpXmLDRPjV4BtlUXOMjP4kgHy4j36leVzsJQQJ99BDACYeBjFXJ3w3AAABACOGB5ka"
+endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+api_version = os.getenv("AZURE_OPENAI_API_VERSION")
+
+# openapiclient = OpenAI(api_key="81ClR2uk3VJCLU3i78xpXmLDRPjV4BtlUXOMjP4kgHy4j36leVzsJQQJ99BDACYeBjFXJ3w3AAABACOGB5ka")
+# openapiclient = OpenAIClient(azure_endpoint, AzureKeyCredential(azure_api_key))
+url = f"https://vector1.openai.azure.com/openai/deployments/text-embedding-ada-002/embeddings?api-version=2023-05-15"
+
+headers = {
+    "Authorization": f"Bearer {api_key}",
+    "Content-Type": "application/json"
+}
+
+# Function to get embedding via REST API
+def get_embedding(text):
+    data = {
+        "input": [text]
+    }
+    response = requests.post(url, headers=headers, json=data)
+    if response.status_code == 200:
+        return response.json()['data'][0]['embedding']
+    else:
+        raise Exception(f"Error: {response.status_code} - {response.text}")
+
+
+
+# async def score_resume_with_llm(jd_text, resume_text):
+#     """Score resume vs JD using LLM structured prompt."""
+#     prompt = f"""
+# You are a professional recruiter.
+
+# Given the following Job Description and Resume, score the resume:
+
+# Job Description:
+# {jd_text}
+
+# Candidate Resume:
+# {resume_text}
+
+# Evaluate and return JSON with:
+# - skill_match (0-10)
+# - experience_relevance (0-10)
+# - cultural_fit_guess (0-10)
+# - strengths (text)
+# - potential_gaps (text)
+# - overall_fit_summary (text)
+# """
+#     completion = openai.ChatCompletion.create(
+#         model="gpt-4-turbo",
+#         messages=[{"role": "user", "content": prompt}],
+#         temperature=0.2
+#     )
+#     content = completion['choices'][0]['message']['content']
+#     try:
+#         result = eval(content)  # Assuming response is structured JSON text
+#         return result
+#     except Exception:
+#         # Handle bad outputs gracefully
+#         return None
+class ResumeScorer:
+    def __init__(self, endpoint, api_key, deployment, api_version="2024-12-01-preview"):
+        self.client = AsyncAzureOpenAI(
+            api_version=api_version,
+            azure_endpoint=endpoint,
+            api_key=api_key,
+        )
+        self.deployment = deployment
+
+    # # def extract_audio_features(self, file_path: str):
+    #     y, sr = librosa.load(file_path, sr=None)
+    #     mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=20)
+    #     pitches, magnitudes = librosa.piptrack(y=y, sr=sr)
+    #     pitch = np.mean(pitches[pitches > 0]) if np.any(pitches > 0) else 0
+    #     energy = np.mean(librosa.feature.rms(y=y))
+
+    #     return {
+    #         "mfcc_std": float(np.std(mfcc)),
+    #         "pitch_mean": float(pitch),
+    #         "energy_mean": float(energy),
+    #     }
+
+    async def score_resume(self, jd_text: str,resume_text: str):
+        # features = self.extract_audio_features(file_path)
+        prompt = f"""
+You are a professional recruiter.
+
+Given the following Job Description and Resume, score the resume:
+
+Job Description:
+{jd_text}
+
+Candidate Resume:
+{resume_text}
+
+Evaluate and return JSON with:
+- skill_match (0-10)
+- experience_relevance (0-10)
+- cultural_fit_guess (0-10)
+- strengths (text)
+- potential_gaps (text)
+- overall_fit_summary (text)
+"""
+
+        response = await self.client.chat.completions.create(
+        model="gpt-4-turbo",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.2,
+            response_format={"type": "json_object"}
+        )
+        # completion_tokens = response.usage
+        
+        # content = response['choices'][0]['message']['content']
+        content = response.choices[0].message.content
+        print(content)
+        try:
+            report = json.loads(content)  # Parse JSON
+            return report   # <-- ADD THIS LINE
+        except Exception as e:
+            print("Error parsing LLM response:", e)
+            return None
+
+import asyncio
+
+@app.get("/get_top_applications_by_job_id")
+async def get_top_applications(job_id: str = Query(..., description="Get all job ids")):
+    # Step 1: Get JD text (Job Description)
+    query = f"SELECT * FROM c WHERE c.type = 'applicant' AND c.job_id = '{job_id}'"
+    applicants = []
+    for item in container.query_items(query=query, enable_cross_partition_query=True):
+        applicants.append(item)
+    
+    jd_query = f"SELECT * FROM c WHERE c.type = 'job' AND c.id = '{job_id}'"
+    jobs = []
+    for item in container.query_items(query=jd_query, enable_cross_partition_query=True):
+        jobs.append(item)
+    
+    jd_text = jobs[0]['description']
+    print(f"Job Description: {jd_text}")
+
+    # Step 2: Get the job description embedding
+    jd_embedding = get_embedding(jd_text)
+
+    # Step 3: Process each applicant's resume
+    applicant_embeddings = []
+    applicant_texts = []
+    for app in applicants:
+        text = app.get("extracted_info", "")
+        applicant_texts.append(text)
+        emb = get_embedding(text)  # Make sure to await async get_embedding
+        applicant_embeddings.append(emb)
+
+    # Step 4: Calculate cosine similarity
+    scores = []
+    for idx, resume_emb in enumerate(applicant_embeddings):
+        # Convert both jd_embedding and resume_emb to numpy arrays
+        jd_embedding_np = np.array(jd_embedding)
+        resume_emb_np = np.array(resume_emb)
+
+        similarity = cosine_similarity(jd_embedding_np.reshape(1, -1), resume_emb_np.reshape(1, -1))[0][0]
+        scores.append((similarity, idx))
+
+    # Step 5: Sort the applicants by similarity score (descending order)
+    scores.sort(reverse=True)
+
+    # Step 6: Select the top N applicants (top 20 in this case)
+    top_N = 10
+    top_candidates = [applicants[idx] for _, idx in scores[:top_N]]
+
+    final_results = []
+    for similarity, applicant in zip([score[0] for score in scores[:top_N]], top_candidates):
+        resume_text = applicant.get("resume_text", "")
+
+        # llm_eval = await score_resume_with_llm(jd_text, resume_text)
+        agent = ResumeScorer(
+            endpoint=AZURE_OPENAI_ENDPOINT,
+            api_key=AZURE_OPENAI_KEY,
+            deployment="gpt-4o"
+        )
+        report = await agent.score_resume(jd_text,resume_text)
+        
+        if report:
+            final_results.append({
+            "applicant_id": applicant.get("id"),
+            "name": applicant.get("name"),
+            "email": applicant.get("email"),
+            "similarity_score": round(similarity, 4),
+            "skill_match": report.get("skill_match"),
+            "experience_relevance": report.get("experience_relevance"),
+            "cultural_fit_guess": report.get("cultural_fit_guess"),
+            "strengths": report.get("strengths"),
+            "potential_gaps": report.get("potential_gaps"),
+            "overall_fit_summary": report.get("overall_fit_summary"),
+        })
+    
+    print(final_results)      
+    await asyncio.sleep(2)
+    # if(final_results!=[]):
+    return JSONResponse(content={"top_applications": final_results})
 
