@@ -1,4 +1,4 @@
-import React, { useEffect, useState, ChangeEvent } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Flex,
   Box,
@@ -20,8 +20,8 @@ import {
   ModalCloseButton,
   ModalBody,
   ModalFooter,
-  Spinner,
   useToast,
+  Center
 } from "@chakra-ui/react";
 import axios from "axios";
 import Header from "../Header/Header";
@@ -35,13 +35,20 @@ interface Job {
   description: string;
 }
 
+interface Applicant {
+  name: string;
+  email: string;
+  extracted_info: string;
+}
+
 const HRJobPortal: React.FC = () => {
   const bgGradient = useColorModeValue(
     "linear(to-br, gray.900, gray.800)",
     "linear(to-br, gray.900, gray.800)"
   );
-  const jobContainerBg = useColorModeValue("gray.700", "gray.600");
-  const modalBg = jobContainerBg;
+  const containerBg = useColorModeValue("gray.700", "gray.600");
+  const outlineButtonColor = '#1e3660'
+  const modalBg ="#262934";
   const modalColor = "whiteAlpha.900";
 
   const {
@@ -59,14 +66,22 @@ const HRJobPortal: React.FC = () => {
     onOpen: onApplicantsOpen,
     onClose: onApplicantsClose,
   } = useDisclosure();
+  const {
+    isOpen: isCandidateProfileOpen,
+    onOpen: onCandidateProfileOpen,
+    onClose: onCandidateProfileClose,
+  } = useDisclosure();
 
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [selectedApplicant, setSelectedApplicant] = useState<Applicant | null>(null);
   const [newJobRole, setNewJobRole] = useState("");
   const [newJobId, setNewJobId] = useState("");
   const [newJobDesc, setNewJobDesc] = useState("");
   const [creating, setCreating] = useState(false);
+  const [applicants, setApplicants] = useState<Applicant[]>([]);
+  const [applicantsLoading, setApplicantsLoading] = useState(false);
   const toast = useToast();
 
   useEffect(() => {
@@ -91,9 +106,52 @@ const HRJobPortal: React.FC = () => {
     onDescOpen();
   };
 
+  const handleOpenProfile = (applicant: Applicant) => {
+    setSelectedApplicant(applicant);
+    onCandidateProfileOpen();
+  };
+
   const handleOpenApplicants = (job: Job) => {
     setSelectedJob(job);
     onApplicantsOpen();
+    fetchApplicants(job.job_id);
+  };
+
+  const fetchApplicants = async (jobId: string) => {
+    setApplicantsLoading(true);
+    try {
+      const response = await axios.get(
+        `${PROD_HOST_URL}/get_applications_by_job_id?job_id=${jobId}`
+      );
+      setApplicants(response.data.applications || []);
+    } catch (error) {
+      console.error(error);
+      toast({
+        title: "Error fetching applicants",
+        status: "error",
+        duration: 3000,
+      });
+    } finally {
+      setApplicantsLoading(false);
+    }
+  };
+
+  const handleSendInvite = async (applicant: Applicant) => {
+    console.log("Invitation Sent!", applicant)
+    // try {
+    //   await axios.post(`${PROD_HOST_URL}/send_invite`, {
+    //     job_id: selectedJob?.job_id,
+    //     email: applicant.email,
+    //   });
+    //   toast({
+    //     title: `Invite sent to ${applicant.name}`,
+    //     status: "success",
+    //     duration: 3000,
+    //   });
+    // } catch (error) {
+    //   console.error(error);
+    //   toast({ title: "Error sending invite", status: "error", duration: 3000 });
+    // }
   };
 
   const handleCreateJob = async () => {
@@ -108,10 +166,9 @@ const HRJobPortal: React.FC = () => {
     setCreating(true);
     try {
       const formData = new FormData();
-      formData.append('job_role', newJobRole);
-      formData.append('job_id', newJobId);
-      formData.append('description', newJobDesc);
-
+      formData.append("job_role", newJobRole);
+      formData.append("job_id", newJobId);
+      formData.append("description", newJobDesc);
       await axios.post(`${PROD_HOST_URL}/create_job`, formData);
       toast({ title: "Job created", status: "success", duration: 3000 });
       onCreateClose();
@@ -168,16 +225,9 @@ const HRJobPortal: React.FC = () => {
                 + New Job
               </Button>
             </Flex>
-
-            <VStack align="stretch" spacing={6} overflow="auto" height="70vh">
+            <VStack align="stretch" spacing={4} overflow="auto" height="70vh">
               {jobs.map((job) => (
-                <Box
-                  key={job.id}
-                  p={6}
-                  bg={jobContainerBg}
-                  borderRadius="2xl"
-                  boxShadow="lg"
-                >
+                <Box key={job.id} p={6} bg={containerBg} borderRadius="2xl">
                   <HStack spacing={4}>
                     <VStack align="start" spacing={1}>
                       <Text fontWeight="bold" fontSize="xl">
@@ -245,8 +295,8 @@ const HRJobPortal: React.FC = () => {
               <FormLabel>Job Description</FormLabel>
               <Textarea
                 placeholder="Enter Job Description"
-                minH={"150px"}
-                maxH={"300px"}
+                minH="150px"
+                maxH="300px"
                 value={newJobDesc}
                 onChange={(e) => setNewJobDesc(e.target.value)}
                 rows={6}
@@ -283,6 +333,12 @@ const HRJobPortal: React.FC = () => {
             overflowY="auto"
             maxH="calc(80vh - 120px)"
             whiteSpace="pre-wrap"
+            bg={containerBg}
+            pl={3}
+            pr={3}
+            mr={4}
+            ml={4}
+            borderRadius="lg"
           >
             {selectedJob?.description || "No description available."}
           </ModalBody>
@@ -298,18 +354,89 @@ const HRJobPortal: React.FC = () => {
       <Modal
         isOpen={isApplicantsOpen}
         onClose={onApplicantsClose}
-        size="2xl"
+        size="5xl"
         isCentered
       >
         <ModalOverlay />
-        <ModalContent bg={modalBg} color={modalColor}>
+        <ModalContent bg={modalBg} color={modalColor} minH="80vh" maxH="80vh">
           <ModalHeader textAlign="center">Top Applicants</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
-            <Text color="gray.400">Coming soon…</Text>
+            {applicantsLoading ? (
+                <Center h="65vh"><Loader /></Center>
+            ) : applicants.length > 0 ? (
+              <VStack align="stretch" spacing={4} overflow="auto" height="65vh">
+                {applicants.map((applicant, index) => (
+                  <Box key={index} p={6} bg={containerBg} borderRadius="2xl">
+                    <HStack spacing={4}>
+                      <VStack align="start" spacing={1}>
+                        <Text fontWeight="bold" fontSize="xl">
+                          {applicant.name}
+                        </Text>
+                        <Text fontSize="sm" color="gray.300">
+                          Email ID: {applicant.email}
+                        </Text>
+                      </VStack>
+                      <Spacer />
+                      <HStack spacing={3}>
+                        <Button
+                          size="md"
+                          colorScheme="purple"
+                          variant="outline"
+                          onClick={() => handleOpenProfile(applicant)}
+                        >
+                          View Profile
+                        </Button>
+                        <Button
+                          size="md"
+                          colorScheme="purple"
+                          onClick={() => handleSendInvite(applicant)}
+                        >
+                          Send Interview Invite
+                        </Button>
+                      </HStack>
+                    </HStack>
+                  </Box>
+                ))}
+              </VStack>
+            ) : (
+              <Text color="gray.400"><Center h="65vh">No applicants found.</Center></Text>
+            )}
           </ModalBody>
           <ModalFooter>
             <Button colorScheme="purple" onClick={onApplicantsClose}>
+              Close
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+      {/* Candidate Profile Modal */}
+      <Modal
+        isOpen={isCandidateProfileOpen}
+        onClose={onCandidateProfileClose}
+        size="xl"
+        isCentered
+      >
+        <ModalOverlay />
+        <ModalContent bg={modalBg} color={modalColor} maxH="80vh">
+          <ModalHeader textAlign="center">Candidate's Profile</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody
+            overflowY="auto"
+            flex={1}
+            maxH="calc(80vh - 120px)"
+            whiteSpace="pre-wrap"
+            bg={containerBg}
+            pl={3}
+            pr={3}
+            mr={4}
+            ml={4}
+            borderRadius="lg"
+          >
+            {`${selectedApplicant?.extracted_info}` || "No Profile available."}
+          </ModalBody>
+          <ModalFooter>
+            <Button colorScheme="purple" onClick={onCandidateProfileClose}>
               Close
             </Button>
           </ModalFooter>
