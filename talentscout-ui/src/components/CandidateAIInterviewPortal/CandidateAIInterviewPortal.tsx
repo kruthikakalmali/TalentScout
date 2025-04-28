@@ -7,9 +7,10 @@ import {
   Spinner,
   useColorModeValue,
 } from "@chakra-ui/react";
-import Header from "./../Header/Header";
+import Header from "../Header/Header";
 import QuestionPanel from "./components/QuestionPanel";
 import QuestionHistory from "./components/QuestionHistory";
+import Loader from "../Loader";
 
 const list = [
   {
@@ -34,7 +35,7 @@ const list = [
   },
 ];
 
-const AIInterviewer: React.FC = () => {
+const CandidateAIInterviewPortal: React.FC = () => {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -63,16 +64,28 @@ const AIInterviewer: React.FC = () => {
   };
 
   return (
-    <Flex direction="column" h="100vh" bgGradient={bgGradient} color="whiteAlpha.900">
-      <Header title="AI Interviewer" />
+    <Flex
+      direction="column"
+      h="100vh"
+      bgGradient={bgGradient}
+      color="whiteAlpha.900"
+    >
+      <Header title="AI Screening Interview Portal" />
 
       {/* Initial Intro */}
       {!sessionId && !loading && (
-        <Flex flex="1" direction="column" justify="center" align="center" p={6} textAlign="center">
+        <Flex
+          flex="1"
+          direction="column"
+          justify="center"
+          align="center"
+          p={6}
+          textAlign="center"
+        >
           <Text fontSize="2xl" mb={6} maxW="600px">
-            Welcome to the AI Mock Interview Portal! Here you’ll receive interview questions,
-            record your answers, see a live transcript, and get feedback on knowledge,
-            confidence, and communication skills.
+            Welcome to the AI Mock Interview Portal! Here you’ll receive
+            interview questions, record your answers, see a live transcript, and
+            get feedback on knowledge, confidence, and communication skills.
           </Text>
           <Button size="lg" colorScheme="purple" onClick={startSession}>
             Start Session
@@ -80,14 +93,12 @@ const AIInterviewer: React.FC = () => {
         </Flex>
       )}
 
-      {/* Loading Spinner */}
       {loading && (
         <Flex flex="1" justify="center" align="center">
-          <Spinner size="xl" thickness="4px" color="purple.500" />
+          <Loader />
         </Flex>
       )}
 
-      {/* Interview Flow */}
       {sessionId && !loading && (
         <Flex flex="1" p={6} gap={4} overflow="hidden">
           <QuestionPanel question="Some random question?" />
@@ -98,5 +109,4 @@ const AIInterviewer: React.FC = () => {
   );
 };
 
-export default AIInterviewer;
-
+export default CandidateAIInterviewPortal;

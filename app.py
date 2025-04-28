@@ -1,5 +1,6 @@
 
 
+from typing import Optional
 from fastapi import FastAPI, UploadFile, Form, File,HTTPException,Query
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -23,21 +24,11 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "https://talent-scout-teal.vercel.app"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Add CORS middleware to the FastAPI app
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],  # Allow React app's URL
-    allow_credentials=True,
-    allow_methods=["*"],  # Allows all HTTP methods (GET, POST, etc.)
-    allow_headers=["*"],  # Allows all headers
-)
-
 
 
 AZURE_CONNECTION_STRING = os.getenv("AZURE_CONNECTION_STRING")
@@ -338,7 +329,8 @@ class Job(BaseModel):
 # POST endpoint to create a job
 @app.post("/create_job")
 async def create_job(
-    job_id: str = Form(...),
+    job_id: Optional[str] = Form(None),
+    job_role: str = Form(...),
     description: str = Form(...)
 ):
     # Generate a unique job ID if not provided (or use the one from request)
@@ -348,6 +340,7 @@ async def create_job(
     job_item = {
         "id": job_id,
         "job_id": job_id,
+        "job_role": job_role,
         "description": description,
         "type": "job"
     }

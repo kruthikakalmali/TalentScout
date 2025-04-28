@@ -4,8 +4,8 @@ import {
   Route,
   Navigate,
 } from "react-router-dom";
-import HRDashboard from "./components/HRDashboard/HRDashboard";
-import AIInterviewer from "./components/AIInterviewer/AIInterviewer";
+import HRJobPortal from "./components/HRJobPortal/HRJobPortal";
+import CandidateAIInterviewPortal from "./components/CandidateAIInterviewPortal/CandidateAIInterviewPortal";
 import NotFound from "./components/NotFound/NotFound";
 import "./App.css";
 
@@ -13,8 +13,9 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<HRDashboard />} />
-        <Route path="/ai-interviewer" element={<AIInterviewer />} />
+        <Route path="/" element={<HRJobPortal />} />
+        <Route path="/hr-job-portal" element={<HRJobPortal />} />
+        <Route path="/candidate-ai-interview-portal" element={<CandidateAIInterviewPortal />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Router>

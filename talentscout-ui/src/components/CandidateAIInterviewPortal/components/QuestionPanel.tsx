@@ -121,15 +121,18 @@ const QuestionPanel: React.FC<QuestionPanelProps> = ({ question }) => {
   };
 
   const uploadAudio = async (blob: Blob) => {
+    const sessionId = sessionStorage.getItem('session_id') || '';
     const formData = new FormData();
-    formData.append("file", blob, "recording.mp3");
+    formData.append('session_id', sessionId);
+    formData.append('audio_file', blob, 'recording.mp3');
+
     try {
-      await fetch("/api/uploadAudio", {
-        method: "POST",
+      await fetch('http://localhost:8000/upload', {
+        method: 'POST',
         body: formData,
       });
     } catch (err) {
-      console.error("Upload error", err);
+      console.error('Upload error', err);
     }
   };
 
