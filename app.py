@@ -1,8 +1,6 @@
-
-
 from typing import Optional
 from fastapi import FastAPI, UploadFile, Form, File,HTTPException,Query
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse,JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import tempfile
 from azure.storage.blob import BlobServiceClient
@@ -26,21 +24,15 @@ from sklearn.metrics.pairwise import cosine_similarity
 import requests
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, UploadFile, Form
-from fastapi.responses import JSONResponse
 import uuid
 import openai
-import os
 from fastapi import FastAPI, Form
 from pydantic import BaseModel
 from uuid import uuid4
 from starlette.responses import JSONResponse
-import openai
-from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import json
-from fastapi.responses import JSONResponse
 from typing import List, Dict
-import whisper
 from azure.communication.email import EmailClient
 from ResumeScorer import ResumeScorer
 from AzureResumeAnalysisAgent import AzureResumeAnalysisAgent
