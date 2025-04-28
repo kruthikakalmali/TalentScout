@@ -80,7 +80,7 @@ async def apply_to_job(
     job_id: str = Form(...),
     resume: UploadFile = None
 ):
-    application_id = str(uuid.uuid4())
+    application_id = "A"+str(random.randint(100000, 999999))
 
     # Read PDF content
     resume_bytes = await resume.read()
@@ -242,8 +242,8 @@ async def upload_audio(session_id: str = Form(...), audio_file: UploadFile = Fil
 #             "filename": unique_filename
 #         }
 
-#     except Exception as e:
-#         return {"error": str(e)}
+    except Exception as e:
+        return {"error": str(e)}
 
 
 class AzureVoiceAnalysisAgent:
