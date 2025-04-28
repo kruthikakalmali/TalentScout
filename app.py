@@ -20,6 +20,8 @@ class AnalyzeRequest(BaseModel):
     session_id: str
 from azure.cosmos import CosmosClient,PartitionKey
 from pdfutility import extract_text_from_pdf
+import random
+
 # from downloadaudiofromazure import download_audio_from_azure
 from fastapi.middleware.cors import CORSMiddleware
 app = FastAPI()
