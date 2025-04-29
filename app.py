@@ -429,8 +429,6 @@ CONNECTION_STRING = "endpoint=https://talent-scout-communications.india.communic
 # Sender email (must be verified in ACS)
 SENDER_EMAIL = "DoNotReply@0c9e4a27-5bc3-47b3-8206-cd4072e4d7cc.azurecomm.net"
 
-# Receiver email
-RECEIVER_EMAIL = "kruthikakalmali@gmail.com"
 OPENAI_API_KEY = AZURE_OPENAI_KEY
 # Initialize Email Client
 email_client = EmailClient.from_connection_string(CONNECTION_STRING)
@@ -463,8 +461,8 @@ async def send_email(request: SendEmailRequest):
             <p>Dear Candidate,</p>
             <p>We are excited to invite you for an interview with us!</p>
             <p>Please plan to take the interview within 48 hours of getting this invite</p>
-            <p>Role:</b> Software Developer</p>
-            <p>JobID:</b>J1234567</p>
+            <p>Role:</b> Full Stack Developer (Backend Focus) </p>
+            <p>JobID:</b> J908765</p>
             <p>Please click the button below to join the interview:</p>
             <p style="text-align: center;">
                 <a href="{INTERVIEW_LINK}" style="background-color: #4CAF50; color: white; padding: 14px 25px; text-align: center; text-decoration: none; display: inline-block; border-radius: 5px; font-size: 16px;">
@@ -480,7 +478,7 @@ async def send_email(request: SendEmailRequest):
     message = {
         "senderAddress": SENDER_EMAIL,
         "recipients": {
-            "to": [{"address": RECEIVER_EMAIL}]
+            "to": [{"address": items[0]['email']}]
         },
         "content": {
             "subject": "You're Invited: Interview with TalentScout",
