@@ -47,6 +47,7 @@ from AzureResumeAnalysisAgent import AzureResumeAnalysisAgent
 from downloadaudiofromazure import download_audio_from_azure
 from AnalyzeRequest import AnalyzeRequest
 
+json1 = { "audio_analysis": { "confidence_score": 0, "calmness_score": 0, "energy_score": 0, "expressiveness_score": 0, "recruiter_summary": "...", "candidate_feedback": { "positive": "...", "suggestions": "..." } }, "technical_analysis": { "per_question": [ { "question": "...", "answer_excerpt": "...", "scores": { "correctness": 0, "completeness": 0, "relevance": 0, "clarity": 0, "depth": 0 }, "summary": "..." } ], "overall_technical_score": 0, "recruiter_summary": "...", "candidate_feedback": { "positive": "...", "suggestions": "..." } } }
 class AzureVoiceAnalysisAgent:
     def __init__(self, endpoint, api_key, deployment, api_version="2024-12-01-preview"):
         self.client = AzureOpenAI(
@@ -69,80 +70,83 @@ class AzureVoiceAnalysisAgent:
             "energy_mean": float(energy),
         }
 
-    async def analyze_voice(self, file_path: str):
+    async def analyze_voice(self, file_path: str,transcript: str,questions: str):
         features = self.extract_audio_features(file_path)
 
         prompt = f"""
-You are an expert interview coach. Analyze the following audio features and assess the candidate's performance:
+You are an expert interview coach with specialties in both **acoustic behavioral analysis** and **technical content evaluation**. 
 
-Features:
-- MFCC Standard Deviation: {features['mfcc_std']}
-- Average Pitch: {features['pitch_mean']}
-- Average Energy: {features['energy_mean']}
+You are provided with:
+- Audio features from a candidate's interview response:
+  - MFCC Standard Deviation: {features['mfcc_std']}
+  - Average Pitch: {features['pitch_mean']}
+  - Average Energy: {features['energy_mean']}
+- Transcript of the candidate's responses: {transcript}
+- List of interview questions: {questions}
 
-Based on these:
-Analyze the following extracted acoustic features from a candidate's interview audio:
+Your task is to perform a two-part analysis:
 
-MFCCs (20 coefficients over time)
+### Part 1: Audio-Based Voice Analysis
+Analyze the extracted acoustic features from the candidate’s audio recording:
 
-Average pitch
+- MFCCs (20 coefficients over time)
+- Average pitch
+- Average energy (volume)
 
-Average energy (volume)
+Evaluate the candidate’s performance across these **behavioral voice traits**:
 
-Based on these features, evaluate and report the candidate’s performance across the following traits:
+**Confidence**  
+- High: lower pitch, louder energy, faster speaking rate, falling intonation.  
+- Low: high pitch variability, rising intonation, soft/hesitant speech.
 
-Confidence:
+**Calmness**  
+- High: steady low pitch, smooth pacing, even energy.  
+- Low: pitch breaks, choppy phrasing, erratic volume.
 
-High confidence is indicated by lower average pitch, louder energy, faster speaking rate, and falling intonation patterns.
+**Energy / Engagement**  
+- High: loud, lively, quick speech with vocal variation.  
+- Low: soft, slow, monotonous delivery.
 
-Lower confidence may be indicated by high pitch variability, rising intonations, frequent pauses, or soft, hesitant speech.
+**Expressiveness (Timbre / MFCC Std Dev)**  
+- High MFCC std indicates vocal dynamism and engagement.  
+- Very low MFCC std suggests flat affect or low engagement.
 
-Calmness:
+For the **recruiter**, give a score from 1–5 for each trait and a brief summary on:
+- Fit for roles requiring communication (sales, leadership, collaboration)
+- Strengths and developmental concerns
 
-Calm delivery is reflected in steady low pitch, moderate volume, and smooth, even pacing with minimal pitch jitter.
+For the **candidate**, provide:
+- Positive voice-based feedback
+- Improvement suggestions (if any), with actionable techniques like breathing, pacing, or modulation drills
 
-Nervousness or anxiety may be suggested by pitch breaks, choppy phrasing, or erratic loudness.
+### Part 2: Technical Content Analysis
+Using the provided list of questions and the transcripted answers, evaluate the **technical quality** of the responses. Focus on:
 
-Energy/Engagement:
+- **Correctness** – Did the candidate give accurate and factually correct answers?
+- **Completeness** – Were key points covered, or were responses vague or partial?
+- **Relevance** – Were the answers well-aligned with the question's intent?
+- **Clarity** – Was the explanation logically structured and easy to follow?
+- **Depth** – Did the answer demonstrate insight, practical understanding, and examples?
 
-High energy is reflected in loud, lively, and quick speech with dynamic vocal variations.
+Provide a 1–5 score for each of the above criteria per question. Also give:
 
-Low energy is reflected in soft, slow, monotonous delivery and prolonged pauses.
+- **Per-question analysis summary**  
+- A total **Technical Competency Score (1–5)** across all responses
 
-Expressiveness (Timbre/MFCC Variance):
+Finally, provide:
 
-Higher MFCC standard deviation indicates more dynamic, engaging voice tone (positive if not excessive).
+- For the **recruiter**: A brief overview of the candidate’s technical aptitude and communication clarity in answering job-relevant questions.
+- For the **candidate**: Constructive feedback highlighting strengths and areas for content improvement. Suggest study/practice areas if gaps were found.
 
-Very low MFCC variance may suggest flat affect or low engagement.
+### Output Format
+Respond only in **JSON** format with the same structure as {json1}
 
-Actionable Insights:
 
-For the recruiter:
+### Important Constraints:
+- Do **not** speculate on ethnicity, gender, or native language.
+- Focus only on **how** the candidate spoke and **what** they said technically.
+- If acoustic traits or technical content is ambiguous, mention it and recommend further review.
 
-Provide a summary score for each trait (Confidence, Calmness, Energy, Expressiveness) on a scale of 1–5.
-
-Give a short paragraph on how these traits may impact the candidate’s fit for client-facing roles, leadership, teamwork, etc.
-
-Highlight potential strengths (e.g., "Strong voice confidence, suitable for sales or leadership roles.") and developmental concerns (e.g., "Slight nervousness detected; may require coaching for high-pressure communication.").
-
-For the candidate:
-
-Offer positive feedback first (e.g., "Your calm, steady voice is a major strength.").
-
-Suggest improvement areas (e.g., "Consider practicing speaking slightly louder and with more varied tone to convey greater enthusiasm.").
-
-If applicable, suggest concrete exercises like voice modulation drills, breathing techniques, or pacing practice.
-
-Important Constraints:
-
-Base insights only on acoustic features, without speculating about personal attributes like ethnicity, gender, or native language.
-
-Focus analysis on how the voice sounds, not what is said.
-
-Maintain a professional, fair, and evidence-based tone in all outputs.
-
-If voice features are ambiguous (e.g., mixed signals), explicitly mention that and suggest further evaluation through content analysis.
-Respond only in JSON format.
 """
 
         response = self.client.chat.completions.create(
@@ -152,7 +156,7 @@ Respond only in JSON format.
                 {"role": "user", "content": prompt},
             ],
             temperature=0.2,
-            max_tokens=500,
+            max_tokens=5000,
             response_format={"type": "json_object"},
         )
         completion_tokens = response.usage

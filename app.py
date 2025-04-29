@@ -169,21 +169,113 @@ async def upload_audio(session_id: str = Form(...), audio_file: UploadFile = Fil
     except Exception as e:
         return {"error": str(e)}
 
+import azure.cognitiveservices.speech as speechsdk
+subscription_key = "72dmjGuP2icKJeQLcRqPvdLyhUXs3lVVYpuBrLmK2leXwDpg2lrAJQQJ99BDACYeBjFXJ3w3AAAYACOG81nO"
+region = "eastus"
+
+
+from pydub import AudioSegment
+from imageio_ffmpeg import get_ffmpeg_exe
+import torchaudio
+
+all_results = []
+
+# Define event callbacks
+# def handle_final_result(evt):
+#     print(f"Recognized: {evt.result.text}")
+#     all_results.append(evt.result.text)
+
+# def handle_canceled(evt):
+#     print(f"Canceled: {evt.reason}")
+#     if evt.reason == speechsdk.CancellationReason.Error:
+#         print(f"Error details: {evt.error_details}")
+
+# def handle_session_stopped(evt):
+#     print("Session stopped.")
+#     stop_event.set()
+
+def recognized(evt):
+    print(f"Recognized: {evt.result.text}")
+    transcript.append(evt.result.text)
+
+def canceled(evt):
+    print(f"Canceled: {evt.reason}")
+    if evt.reason == speechsdk.CancellationReason.Error:
+        print(f"Error: {evt.error_details}")
+    done.set()
+
+def session_stopped(evt):
+    print("Session stopped.")
+    done.set()
+
+import threading
 
 @app.post("/generate_report")
 async def generate_report(request: AnalyzeRequest):
     try:
-        file_path = await download_audio_from_azure(request.session_id)
+        file_path = await download_audio_from_azure(request.session_id+".mp3")
+        # CONVERT TO WAV FOR AZURE SPEECH SERVICES SDK
+        waveform, sample_rate = torchaudio.load(file_path)
+        resampler = torchaudio.transforms.Resample(orig_freq=sample_rate, new_freq=16000)
+        waveform = resampler(waveform)
+        if waveform.shape[0] > 1:
+            waveform = waveform.mean(dim=0, keepdim=True)
+        torchaudio.save("output.wav", waveform, 16000)
+        # GENERATE TRANSCRIPT FOR AZURE SPEECH SERVICES SDK
+        speech_config = speechsdk.SpeechConfig(subscription=subscription_key, region=region)
+        audio_config = speechsdk.audio.AudioConfig(filename="output.wav")
+        recognizer = speechsdk.SpeechRecognizer(speech_config=speech_config, audio_config=audio_config)
+        all_results = []
+        def recognized(evt):
+            if evt.result.reason == speechsdk.ResultReason.RecognizedSpeech:
+                # print("Recognized:", evt.result.text)
+                all_results.append(evt.result.text)
+            elif evt.result.reason == speechsdk.ResultReason.NoMatch:
+                print("No speech could be recognized")
+        def session_stopped(evt):
+            print("Session stopped.")
+            stop_recognition()
+        def canceled(evt):
+            print("Canceled:", evt.reason)
+            stop_recognition()
+        def stop_recognition():
+            recognizer.stop_continuous_recognition_async()
+            done.set()
+        from threading import Event
+        done = Event()
+        recognizer.recognized.connect(recognized)
+        recognizer.session_stopped.connect(session_stopped)
+        recognizer.canceled.connect(canceled)
+        recognizer.start_continuous_recognition()
+        done.wait()
+        full_transcript = " ".join(all_results)
+        print("\nFull Transcript:\n", full_transcript)
+
         agent = AzureVoiceAnalysisAgent(
             endpoint=AZURE_OPENAI_ENDPOINT,
             api_key=AZURE_OPENAI_KEY,
             deployment="gpt-4o"
         )
-        report = await agent.analyze_voice(file_path)
-        return {"report": report}
+        query = f"SELECT * FROM c WHERE c.type = 'session' AND c.id = '{request.session_id}'"
+        items = []
+        print(request.session_id)
+        for item in container.query_items(query=query, enable_cross_partition_query=True):
+            items.append(item)
+        questions = items[0]['questions']
+        numbered_questions = '\n'.join(f"{i+1}. {q.strip()}" for i, q in enumerate(questions))
+        print(numbered_questions)
+
+
+
+        report = await agent.analyze_voice(file_path,full_transcript,numbered_questions)
+
+
+
+        data = json.loads(report)
+        return {"report": data}
 
     except Exception as e:
-        raise HTTPException(status_code=5000, detail=f"Error analyzing audio: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error analyzing audio: {str(e)}")
 import shutil,logging
 try:
     version = subprocess.check_output(["ffmpeg", "-version"]).decode().split("\n")[0]
@@ -286,7 +378,7 @@ class RecruiterAgent:
                     {"role": "user", "content": prompt},
                 ],
                 temperature=0.3,
-                max_tokens=500,
+                max_tokens=5000,
             )
 
             # The response is already in JSON format, so you can return it directly
@@ -1069,12 +1161,13 @@ async def chat(req: ChatRequest):
         # return {"reply": reply.strip()}
 
     elif req.mode == "openai":
-        prompt = f"You are a helpful recruiter assistant. User asked: '{req.message}'"
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": prompt}]
-        )
-        return {"reply": response['choices'][0]['message']['content']}
+        # prompt = f"You are a helpful recruiter assistant. User asked: '{req.message}'"
+        # response = openai.ChatCompletion.create(
+        #     model="gpt-3.5-turbo",
+        #     messages=[{"role": "user", "content": prompt}]
+        # )
+        # return {"reply": response['choices'][0]['message']['content']}
+        return null
 
     else:
         return {"reply": "Invalid mode."}
