@@ -1133,21 +1133,21 @@ class ChatRequest(BaseModel):
     mode: str  # 'vector' or 'openai'
 
 
-@app.post("/chat")
-def chat_route(request: ChatRequest):
-    # data = request.json()
-    mode = request.mode
-    message = request.message
+# @app.post("/chat")
+# def chat_route(request: ChatRequest):
+#     # data = request.json()
+#     mode = request.mode
+#     message = request.message
 
-    if mode == "vector":
-        results = chatbot(message)
-        return {"reply": json.dumps(results)}
-    elif mode == "openai":
-        response = openai.ChatCompletion.create(
-            model="gpt-4",
-            messages=[{"role": "user", "content": message}]
-        )
-        return {"reply": response.choices[0].message['content']}
+#     if mode == "vector":
+#         results = chatbot(message)
+#         return {"reply": json.dumps(results)}
+#     elif mode == "openai":
+#         response = openai.ChatCompletion.create(
+#             model="gpt-4",
+#             messages=[{"role": "user", "content": message}]
+#         )
+#         return {"reply": response.choices[0].message['content']}
 
 @app.post("/chat")
 async def chat(req: ChatRequest):
