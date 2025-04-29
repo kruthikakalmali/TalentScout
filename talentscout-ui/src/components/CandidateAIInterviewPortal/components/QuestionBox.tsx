@@ -2,7 +2,7 @@ import React from 'react';
 import { Box, Text } from '@chakra-ui/react';
 
 interface QuestionBoxProps {
-  question: string;
+  question: string | null;
 }
 
 const QuestionBox: React.FC<QuestionBoxProps> = ({ question }) => (
