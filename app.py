@@ -437,9 +437,13 @@ email_client = EmailClient.from_connection_string(CONNECTION_STRING)
 
 # Initialize FastAPI
 INTERVIEW_LINK = "https://talent-scout-teal.vercel.app/"
+
+class SendEmailRequest(BaseModel):
+    identity_id: str
+
 @app.post("/send-email")
-async def send_email(identity_id: str = Form(...)):
-    query = f"SELECT * FROM c WHERE c.id = '{identity_id}'"
+async def send_email(request: SendEmailRequest):
+    query = f"SELECT * FROM c WHERE c.id = '{request.identity_id}'"
     items = list(container.query_items(query=query, enable_cross_partition_query=True))
     if not items:
         raise HTTPException(status_code=404, detail="Item not found")
