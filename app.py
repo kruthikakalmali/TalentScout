@@ -783,3 +783,122 @@ async def get_all_interview_completed_applicants():
      else:
          return JSONResponse(content={"message": "No applications with completed interview"})
  
+
+from msal import PublicClientApplication
+
+CLIENT_ID = "c52cb629-9959-4b1a-a960-8ac7c9a4ef3a"
+TENANT_ID = "c7c3caf6-bcf8-45fe-a2f4-c976313d4a93"
+AUTHORITY = f"https://login.microsoftonline.com/{TENANT_ID}"
+SCOPES = ["Mail.Send"]
+client_id = CLIENT_ID
+client_secret = "k128Q~kCFM-xAIJVTAls8MzDrpez2_jumzMRvbDI"
+tenant_id = TENANT_ID
+ 
+import os
+from msal import PublicClientApplication
+# from config import CLIENT_ID, AUTHORITY, SCOPES
+from msal import ConfidentialClientApplication
+
+def get_access_token():
+    # client_id = "your_client_id"
+    # client_secret = "your_client_secret"  # 🔥 Add this
+    # tenant_id = "your_tenant_id"
+
+    authority = f"https://login.microsoftonline.com/{tenant_id}"
+    scopes = ["https://graph.microsoft.com/.default"]
+
+    app = ConfidentialClientApplication(
+        client_id,
+        authority=authority,
+        client_credential=client_secret,
+    )
+
+    result = app.acquire_token_for_client(scopes=scopes)
+
+    if "access_token" in result:
+        return result["access_token"]
+    else:
+        raise Exception("Could not acquire token: " + str(result))
+
+import requests
+user_id="951b9783-2b72-4aad-839c-8a9da796bda4"
+def send_email():
+    token = get_access_token()
+    print("GOT ACCESS TOKEN")
+    url = "https://graph.microsoft.com/v1.0/users/951b9783-2b72-4aad-839c-8a9da796bda4/sendMail"
+    print(url)  # Replace {user_id} with a valid user ID
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+    }
+    
+    # Construct your email message content
+    email_msg = {
+        "message": {
+            "subject": "Interview Summary: Candidate Alice",
+            "body": {
+                "contentType": "HTML",
+                "content": "<h2>Interview Summary</h2><p>Candidate Alice: Strong technical skills, but needs to improve system design fundamentals.</p>"
+            },
+            "toRecipients": [
+                {
+                    "emailAddress": {
+                        "address": "recruiter@example.com"
+                    }
+                }
+            ]
+        },
+        "saveToSentItems": "true"
+    }
+    
+    response = requests.post(url, headers=headers, json=email_msg)
+
+    if response.status_code == 202:
+        print("Email sent successfully!")
+    else:
+        print("Error sending email:", response.status_code, response.text)
+
+
+
+
+# send_email()
+
+
+def get_user_id_by_email(token, email):
+    url = f"https://graph.microsoft.com/v1.0/users/{email}"  # Use the email address here
+    headers = {
+        "Authorization": f"Bearer {token}"
+    }
+
+    response = requests.get(url, headers=headers)
+
+    if response.status_code == 200:
+        user_data = response.json()
+        return user_data['id']  # This will be the unique `user_id` of the specified email
+    else:
+        raise Exception("Error getting user ID:", response.status_code, response.text)
+token = get_access_token()
+# print(token)  # Get your access token as before
+
+def get_user_id_by_email(token, email):
+    url = f"https://graph.microsoft.com/v1.0/users/{email}"  # Use the email address here
+    headers = {
+        "Authorization": f"Bearer {token}"
+    }
+
+    response = requests.get(url, headers=headers)
+
+    if response.status_code == 200:
+        user_data = response.json()
+        return user_data['id']  # This will be the unique `user_id` of the specified email
+    else:
+        raise Exception("Error getting user ID:", response.status_code, response.text)
+
+
+
+
+user_id = get_user_id_by_email(token,"KruthikaKalmali@LowesIndia366.onmicrosoft.com")
+print("user id is" + user_id)
+# print("User ID:", user_id)
+
+send_email()

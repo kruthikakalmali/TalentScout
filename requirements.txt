@@ -20,3 +20,6 @@ azure-ai-ml==1.14.0
 azure-communication-email
 PyPDF2
 ffmpeg
+msal
+auth
+langchain
