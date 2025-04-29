@@ -123,7 +123,7 @@ container_name = os.getenv("AZURE_CONTAINER_NAME")
 blob_service_client = BlobServiceClient.from_connection_string(connect_str)
 container_client = blob_service_client.get_container_client(container_name)
 
-@app.post("/upload/")
+@app.post("/upload")
 async def upload_audio(session_id: str = Form(...), audio_file: UploadFile = File(...)):
     query = f"SELECT * FROM c WHERE c.id = '{session_id}'"
     items = list(container.query_items(query=query, enable_cross_partition_query=True))
@@ -170,7 +170,7 @@ async def upload_audio(session_id: str = Form(...), audio_file: UploadFile = Fil
         return {"error": str(e)}
 
 
-@app.post("/generate_report/")
+@app.post("/generate_report")
 async def generate_report(request: AnalyzeRequest):
     try:
         file_path = await download_audio_from_azure(request.session_id)
@@ -392,7 +392,7 @@ class SubmitAdaptiveResponseRequest(BaseModel):
     transcript: str
 
 
-@app.post("/submit_adaptive_response/")
+@app.post("/submit_adaptive_response")
 async def submit_adaptive_response(request: SubmitAdaptiveResponseRequest):
     query = f"SELECT * FROM c WHERE c.id = '{request.session_id}'"
     try:
