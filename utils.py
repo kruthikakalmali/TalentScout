@@ -1,78 +1,33 @@
-
-
-from typing import Optional
-from fastapi import FastAPI, UploadFile, Form, File,HTTPException,Query
-from fastapi.responses import StreamingResponse
-from fastapi.middleware.cors import CORSMiddleware
+import os
 import tempfile
-from azure.storage.blob import BlobServiceClient
-import uuid
-from openai import AzureOpenAI,AsyncAzureOpenAI
-import os
-import librosa
-import numpy as np
-import subprocess
-import ffmpeg
-from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
-from pydantic import BaseModel
-import azure.cosmos
-class AnalyzeRequest(BaseModel):
-    session_id: str
-from azure.cosmos import CosmosClient,PartitionKey
-from pdfutility import extract_text_from_pdf
-import random
-import asyncio
-from sklearn.metrics.pairwise import cosine_similarity
-import requests
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi import FastAPI, UploadFile, Form
-from fastapi.responses import JSONResponse
-import uuid
-import openai
-import os
-from fastapi import FastAPI, Form
-from pydantic import BaseModel
-from uuid import uuid4
-from starlette.responses import JSONResponse
-import openai
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel
-import json
-from fastapi.responses import JSONResponse
-from typing import List, Dict
-import whisper
-from azure.communication.email import EmailClient
-from ResumeScorer import ResumeScorer
-from AzureResumeAnalysisAgent import AzureResumeAnalysisAgent
-from downloadaudiofromazure import download_audio_from_azure
-from AnalyzeRequest import AnalyzeRequest
+from pydub import AudioSegment
+from imageio_ffmpeg import get_ffmpeg_exe
 
 
 async def convert_webm_to_mp3(file_data: bytes) -> bytes:
-    """Converts WebM audio bytes to MP3 bytes using FFmpeg."""
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as temp_input:
-        temp_input.write(file_data)
-        temp_input.flush()
-        input_path = temp_input.name
+    """Converts WebM audio bytes to MP3 bytes using a bundled FFmpeg binary."""
+    # write incoming bytes to a temp .webm file
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as temp_in:
+        temp_in.write(file_data)
+        temp_in.flush()
+        input_path = temp_in.name
 
     output_path = input_path.replace(".webm", ".mp3")
 
     try:
-        # FFmpeg command to convert
-        subprocess.run(
-            ["ffmpeg", "-i", input_path, "-f", "mp3", "-y", output_path],
-            check=True,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
-        )
+        # point pydub at the bundled ffmpeg binary
+        AudioSegment.converter = get_ffmpeg_exe()
 
+        # load WebM and export as MP3
+        audio = AudioSegment.from_file(input_path, format="webm")
+        audio.export(output_path, format="mp3")
+
+        # read back the mp3 bytes
         with open(output_path, "rb") as f:
-            mp3_data = f.read()
-
-        return mp3_data
+            return f.read()
 
     finally:
-        # Always clean up temp files
+        # clean up
         os.unlink(input_path)
         if os.path.exists(output_path):
             os.unlink(output_path)
