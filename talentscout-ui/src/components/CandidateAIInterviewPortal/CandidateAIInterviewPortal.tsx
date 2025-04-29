@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { Flex, Text, Button, useColorModeValue } from "@chakra-ui/react";
-import Header from "../Header/Header";
+import Header from "../Header";
 import QuestionPanel from "./components/QuestionPanel";
 import QuestionHistory from "./components/QuestionHistory";
 import Loader from "../Loader";

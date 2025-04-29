@@ -778,7 +778,14 @@ async def get_all_interview_completed_applicants():
      items = []
      # Execute the query
      for item in container.query_items(query=query, enable_cross_partition_query=True):
-         items.append(item)
+        query1 = f"SELECT * FROM c WHERE c.type = 'session' and c.idenitity_id='{item['id']}'"
+        items1 = []
+        for item1 in container.query_items(query=query1, enable_cross_partition_query=True):
+            items1.append(item1)
+        
+        session_id = items1[0]['id']
+        item['session_id'] = session_id
+        items.append(item)
  
      # Return the results
      if items:

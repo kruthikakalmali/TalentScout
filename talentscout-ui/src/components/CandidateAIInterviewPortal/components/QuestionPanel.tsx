@@ -89,18 +89,16 @@ const QuestionPanel: React.FC<QuestionPanelProps> = ({
     })();
   }, [interviewEnded]);
 
-  // ——— Interview Complete UI —————————————
   if (interviewEnded) {
     return (
       <InterviewComplete
         sessionId={sessionId}
         bigAudioUrl={bigAudioUrl}
-        onGenerateReport={() => navigate(`/generated-report?session_id=${sessionId}`)}
+        onGenerateReport={() => navigate(`/candidate/generated-feedback-report?session_id=${sessionId}`)}
       />
     );
   }
 
-  // ——— Live Q&A UI —————————————
   return (
     <Box
       w="70%"
