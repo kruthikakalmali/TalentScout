@@ -184,7 +184,13 @@ async def generate_report(request: AnalyzeRequest):
 
     except Exception as e:
         raise HTTPException(status_code=5000, detail=f"Error analyzing audio: {str(e)}")
-
+import shutil,logging
+try:
+    version = subprocess.check_output(["ffmpeg", "-version"]).decode().split("\n")[0]
+    logging.info(f"Found system ffmpeg: {version}")
+except Exception:
+    logging.error("ffmpeg binary not found on PATH")
+print("FFmpeg path:", shutil.which("ffmpeg"))
 
 class Job(BaseModel):
     job_id: str
@@ -911,4 +917,164 @@ user_id = get_user_id_by_email(token,"KruthikaKalmali@LowesIndia366.onmicrosoft.
 print("user id is" + user_id)
 # print("User ID:", user_id)
 
-send_email()
+# send_email()
+
+
+
+import openai
+import requests
+import json
+import numpy as np
+from sklearn.metrics.pairwise import cosine_similarity
+
+# Azure OpenAI Configuration
+api_key = "G0EcfY6zYcCx9QvKTGe1UruDMIEGph1MLUIVquMbipzdQDdfvDf1JQQJ99BDACHYHv6XJ3w3AAAAACOG0mTU"
+openai_endpoint = "https://ai-kunalmodi0374ai269865417376.openai.azure.com/"
+deployment_id = "text-embedding-ada-002"  # Replace with your deployment ID
+
+# Azure Search Configuration
+AZURE_SEARCH_ENDPOINT = "https://vectorsearchtalentscout.search.windows.net"
+AZURE_SEARCH_API_KEY = "7ec74giuolqkWiIOeHl6luXvqh05T7VizeRKYcRyWSAzSeC1J3yz"
+AZURE_SEARCH_INDEX_NAME = "resumes"
+
+# Configure OpenAI API client
+openai.api_key = api_key
+openai.api_base = openai_endpoint
+
+# Azure Cognitive Services API setup (for embedding generation)
+AZURE_COGNITIVE_SERVICES_API_KEY = AZURE_SEARCH_API_KEY
+AZURE_COGNITIVE_SERVICES_ENDPOINT = AZURE_SEARCH_ENDPOINT
+
+# Azure Search API setup
+# AZURE_SEARCH_ENDPOINT = "https://YOUR_SEARCH_ENDPOINT.search.windows.net"
+# AZURE_SEARCH_API_KEY = "YOUR_AZURE_SEARCH_API_KEY"
+# AZURE_SEARCH_INDEX_NAME = "resumes"  # The name of the Azure Search index where the resumes are stored
+
+# Function to generate embeddings using Azure Cognitive Services Text Analytics API
+# def generate_embedding_for_input(input_text):
+#     url = f"{AZURE_COGNITIVE_SERVICES_ENDPOINT}/text/analytics/v3.0-preview.1/entities/recognition/general"
+
+    
+#     headers = {
+#         "Ocp-Apim-Subscription-Key": AZURE_COGNITIVE_SERVICES_API_KEY,
+#         "Content-Type": "application/json"
+#     }
+    
+#     data = {
+#         "documents": [
+#             {
+#                 "id": "1",
+#                 "language": "en",
+#                 "text": input_text
+#             }
+#         ]
+#     }
+    
+#     response = requests.post(url, headers=headers, json=data)
+#     print(response)
+
+def generate_embedding_for_input(input_text):
+    response = openai.Embedding.create(
+        input=input_text,
+        deployment_id=deployment_id,     # Your Azure OpenAI deployment name
+        api_version="2023-05-15"         # Use your correct API version
+    )
+    embedding = response["data"][0]["embedding"]
+    # print(response)
+    return embedding
+
+
+# # Function to search the Azure Cognitive Search index for top 3 matching resumes
+def search_resumes(embedding):
+    search_url = f"{AZURE_SEARCH_ENDPOINT}/indexes/{AZURE_SEARCH_INDEX_NAME}/docs/search?api-version=2023-07-01-Preview"
+
+    
+    headers = {
+        'Content-Type': 'application/json',
+        'api-key': AZURE_SEARCH_API_KEY
+    }
+    print(len(embedding))
+    print(type(embedding[0]))
+    search_body = {
+    "vector": {
+        "value": embedding,
+        "fields": "resume_embedding",
+         "k": 3
+    }
+}
+    
+    response = requests.post(search_url, headers=headers, json=search_body)
+    # print(response.text)
+    return response
+import json
+# Main chatbot function
+def chatbot(user_input):
+    embedding = get_embedding(user_input)
+    search_results = search_resumes(embedding)
+    decoded_response = search_results.content.decode("utf-8")
+    parsed_response = json.loads(decoded_response)
+    print(parsed_response['value'])
+    items=[]
+    for result in parsed_response['value']:
+        score = result["@search.score"]
+        id = result["id"]
+        name = result["name"]
+        email = result["email"]
+        item = {"name":name,"email":email}
+        items.append(item)
+        # items.add(id)
+        # items.add(name)
+        # items.add(email)
+        print(f"ID: {id}")
+        print(f"Name: {name}")
+        print(f"Email: {email}")
+        print(f"Score: {score}")
+        print("-" * 40)
+    return items
+# chatbot("backend")
+
+class ChatRequest(BaseModel):
+    message: str
+    mode: str  # 'vector' or 'openai'
+
+
+@app.post("/chat")
+def chat_route(request: ChatRequest):
+    # data = request.json()
+    mode = request.mode
+    message = request.message
+
+    if mode == "vector":
+        results = chatbot(message)
+        return {"reply": json.dumps(results)}
+    elif mode == "openai":
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[{"role": "user", "content": message}]
+        )
+        return {"reply": response.choices[0].message['content']}
+
+@app.post("/chat")
+async def chat(req: ChatRequest):
+    if req.mode == "vector":
+        embedding = get_embedding(req.message)
+        results = chatbot(message)
+        return results
+        # if not results.get("value"):
+        #     return {"reply": "No matching resumes found."}
+
+        # reply = "Here are the top matches:\n\n"
+        # for r in results["value"]:
+        #     reply += f"👤 Name: {r['name']}\n📧 Email: {r['email']}\n📊 Match Score: {round(r['@search.score'] * 100, 2)}%\n\n"
+        # return {"reply": reply.strip()}
+
+    elif req.mode == "openai":
+        prompt = f"You are a helpful recruiter assistant. User asked: '{req.message}'"
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": prompt}]
+        )
+        return {"reply": response['choices'][0]['message']['content']}
+
+    else:
+        return {"reply": "Invalid mode."}
