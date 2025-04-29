@@ -750,4 +750,36 @@ async def apply_to_job(
 
 
 
-    
+@app.get("/get_all_interview_completed_applicants_by_job_id")
+async def get_all_interview_completed_applicants_by_jobid(job_id: str = Query(..., description="get_all_interview_completed_applicants_by_jobid")):
+     # Query the Cosmos DB for documents with type = "application" and the given job_id
+     query = f"SELECT * FROM c WHERE c.type = 'applicant' AND c.job_id = '{job_id}' and c.status='INTERVIEW_COMPLETE'"
+ 
+     items = []
+     # Execute the query
+     for item in container.query_items(query=query, enable_cross_partition_query=True):
+         items.append(item)
+ 
+     # Return the results
+     if items:
+         return JSONResponse(content={"applications": items})
+     else:
+         return JSONResponse(content={"message": "No applications found for the given job_id."})
+ 
+
+@app.get("/get_all_interview_completed_applicants")
+async def get_all_interview_completed_applicants():
+     # Query the Cosmos DB for documents with type = "application" and the given job_id
+     query = f"SELECT * FROM c WHERE c.type = 'applicant' and c.status='INTERVIEW_COMPLETE'"
+ 
+     items = []
+     # Execute the query
+     for item in container.query_items(query=query, enable_cross_partition_query=True):
+         items.append(item)
+ 
+     # Return the results
+     if items:
+         return JSONResponse(content={"applications": items})
+     else:
+         return JSONResponse(content={"message": "No applications with completed interview"})
+ 
