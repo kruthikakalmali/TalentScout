@@ -21,11 +21,12 @@ import {
   ModalBody,
   ModalFooter,
   useToast,
-  Center
+  Center,
 } from "@chakra-ui/react";
 import axios from "axios";
 import Header from "../Header/Header";
 import Loader from "../Loader";
+import ApplicantAccordion from "./ApplicantAccordian";
 import { PROD_HOST_URL } from "../../constants";
 
 interface Job {
@@ -38,7 +39,7 @@ interface Job {
 interface Applicant {
   name: string;
   email: string;
-  extracted_info: string;
+  applicant_id: string;
 }
 
 const HRJobPortal: React.FC = () => {
@@ -47,8 +48,7 @@ const HRJobPortal: React.FC = () => {
     "linear(to-br, gray.900, gray.800)"
   );
   const containerBg = useColorModeValue("gray.700", "gray.600");
-  const outlineButtonColor = '#1e3660'
-  const modalBg ="#262934";
+  const modalBg = "#262934";
   const modalColor = "whiteAlpha.900";
 
   const {
@@ -66,16 +66,10 @@ const HRJobPortal: React.FC = () => {
     onOpen: onApplicantsOpen,
     onClose: onApplicantsClose,
   } = useDisclosure();
-  const {
-    isOpen: isCandidateProfileOpen,
-    onOpen: onCandidateProfileOpen,
-    onClose: onCandidateProfileClose,
-  } = useDisclosure();
 
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
-  const [selectedApplicant, setSelectedApplicant] = useState<Applicant | null>(null);
   const [newJobRole, setNewJobRole] = useState("");
   const [newJobId, setNewJobId] = useState("");
   const [newJobDesc, setNewJobDesc] = useState("");
@@ -106,11 +100,6 @@ const HRJobPortal: React.FC = () => {
     onDescOpen();
   };
 
-  const handleOpenProfile = (applicant: Applicant) => {
-    setSelectedApplicant(applicant);
-    onCandidateProfileOpen();
-  };
-
   const handleOpenApplicants = (job: Job) => {
     setSelectedJob(job);
     onApplicantsOpen();
@@ -121,9 +110,9 @@ const HRJobPortal: React.FC = () => {
     setApplicantsLoading(true);
     try {
       const response = await axios.get(
-        `${PROD_HOST_URL}/get_applications_by_job_id?job_id=${jobId}`
+        `${PROD_HOST_URL}/get_top_applications_by_job_id?job_id=${jobId}`
       );
-      setApplicants(response.data.applications || []);
+      setApplicants(response.data.top_applications || []);
     } catch (error) {
       console.error(error);
       toast({
@@ -137,21 +126,19 @@ const HRJobPortal: React.FC = () => {
   };
 
   const handleSendInvite = async (applicant: Applicant) => {
-    console.log("Invitation Sent!", applicant)
-    // try {
-    //   await axios.post(`${PROD_HOST_URL}/send_invite`, {
-    //     job_id: selectedJob?.job_id,
-    //     email: applicant.email,
-    //   });
-    //   toast({
-    //     title: `Invite sent to ${applicant.name}`,
-    //     status: "success",
-    //     duration: 3000,
-    //   });
-    // } catch (error) {
-    //   console.error(error);
-    //   toast({ title: "Error sending invite", status: "error", duration: 3000 });
-    // }
+    try {
+      await axios.post(`${PROD_HOST_URL}/send-email`, {
+        identity_id: applicant.applicant_id,
+      });
+      toast({
+        title: `Invite sent to ${applicant.name}`,
+        status: "success",
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error(error);
+      toast({ title: "Error sending invite", status: "error", duration: 3000 });
+    }
   };
 
   const handleCreateJob = async () => {
@@ -262,8 +249,6 @@ const HRJobPortal: React.FC = () => {
           </Box>
         </Flex>
       )}
-
-      {/* Create Job Modal */}
       <Modal
         isOpen={isCreateOpen}
         onClose={onCreateClose}
@@ -322,8 +307,6 @@ const HRJobPortal: React.FC = () => {
           </ModalFooter>
         </ModalContent>
       </Modal>
-
-      {/* Job Description Modal */}
       <Modal isOpen={isDescOpen} onClose={onDescClose} size="xl" isCentered>
         <ModalOverlay />
         <ModalContent bg={modalBg} color={modalColor} maxH="80vh">
@@ -349,8 +332,6 @@ const HRJobPortal: React.FC = () => {
           </ModalFooter>
         </ModalContent>
       </Modal>
-
-      {/* Applicants Modal */}
       <Modal
         isOpen={isApplicantsOpen}
         onClose={onApplicantsClose}
@@ -363,80 +344,27 @@ const HRJobPortal: React.FC = () => {
           <ModalCloseButton />
           <ModalBody>
             {applicantsLoading ? (
-                <Center h="65vh"><Loader /></Center>
+              <Center h="65vh">
+                <Loader />
+              </Center>
             ) : applicants.length > 0 ? (
               <VStack align="stretch" spacing={4} overflow="auto" height="65vh">
                 {applicants.map((applicant, index) => (
-                  <Box key={index} p={6} bg={containerBg} borderRadius="2xl">
-                    <HStack spacing={4}>
-                      <VStack align="start" spacing={1}>
-                        <Text fontWeight="bold" fontSize="xl">
-                          {applicant.name}
-                        </Text>
-                        <Text fontSize="sm" color="gray.300">
-                          Email ID: {applicant.email}
-                        </Text>
-                      </VStack>
-                      <Spacer />
-                      <HStack spacing={3}>
-                        <Button
-                          size="md"
-                          colorScheme="purple"
-                          variant="outline"
-                          onClick={() => handleOpenProfile(applicant)}
-                        >
-                          View Profile
-                        </Button>
-                        <Button
-                          size="md"
-                          colorScheme="purple"
-                          onClick={() => handleSendInvite(applicant)}
-                        >
-                          Send Interview Invite
-                        </Button>
-                      </HStack>
-                    </HStack>
-                  </Box>
+                  <ApplicantAccordion
+                    key={index}
+                    applicant={applicant as any}
+                    onInvite={() => handleSendInvite(applicant)}
+                  />
                 ))}
               </VStack>
             ) : (
-              <Text color="gray.400"><Center h="65vh">No applicants found.</Center></Text>
+              <Text color="gray.400">
+                <Center h="65vh">No applicants found.</Center>
+              </Text>
             )}
           </ModalBody>
           <ModalFooter>
             <Button colorScheme="purple" onClick={onApplicantsClose}>
-              Close
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-      {/* Candidate Profile Modal */}
-      <Modal
-        isOpen={isCandidateProfileOpen}
-        onClose={onCandidateProfileClose}
-        size="xl"
-        isCentered
-      >
-        <ModalOverlay />
-        <ModalContent bg={modalBg} color={modalColor} maxH="80vh">
-          <ModalHeader textAlign="center">Candidate's Profile</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody
-            overflowY="auto"
-            flex={1}
-            maxH="calc(80vh - 120px)"
-            whiteSpace="pre-wrap"
-            bg={containerBg}
-            pl={3}
-            pr={3}
-            mr={4}
-            ml={4}
-            borderRadius="lg"
-          >
-            {`${selectedApplicant?.extracted_info}` || "No Profile available."}
-          </ModalBody>
-          <ModalFooter>
-            <Button colorScheme="purple" onClick={onCandidateProfileClose}>
               Close
             </Button>
           </ModalFooter>
