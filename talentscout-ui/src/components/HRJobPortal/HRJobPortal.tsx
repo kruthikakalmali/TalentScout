@@ -24,7 +24,7 @@ import {
   Center,
 } from "@chakra-ui/react";
 import axios from "axios";
-import Header from "../Header/Header";
+import Header from "../Header";
 import Loader from "../Loader";
 import ApplicantAccordion from "./ApplicantAccordian";
 import { PROD_HOST_URL } from "../../constants";
@@ -178,7 +178,7 @@ const HRJobPortal: React.FC = () => {
       bgGradient={bgGradient}
       color="whiteAlpha.900"
     >
-      <Header title="HR Dashboard" />
+      <Header title="Recruiter Jobs Dashboard" />
 
       {loading ? (
         <Flex justify="center" align="center" h="100%">
