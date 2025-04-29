@@ -1,0 +1,79 @@
+/* App.css or chatbot.css */
+.chatbot-container {
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto;
+    padding: 20px;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    background-color: #f9f9f9;
+  }
+  
+  .mode-selection {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  
+  .mode-selection button {
+    padding: 10px;
+    background-color: #4caf50;
+    color: white;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+    width: 45%;
+  }
+  
+  .mode-selection button:hover {
+    background-color: #45a049;
+  }
+  
+  .chat-history {
+    height: 300px;
+    overflow-y: auto;
+    margin-bottom: 20px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    background-color: #fff;
+  }
+  
+  .chat-message {
+    margin-bottom: 15px;
+  }
+  
+  .chat-message p {
+    margin: 0;
+    padding: 5px;
+  }
+  
+  .chat-input {
+    display: flex;
+    align-items: center;
+  }
+  
+  .chat-input input {
+    flex: 1;
+    padding: 10px;
+    margin-right: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+  }
+  
+  .chat-input button {
+    padding: 10px 15px;
+    background-color: #4caf50;
+    color: white;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+  }
+  
+  .chat-input button:disabled {
+    background-color: #ccc;
+  }
+  
+  .chat-input button:hover {
+    background-color: #45a049;
+  }
+  
