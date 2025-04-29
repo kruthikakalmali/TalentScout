@@ -169,7 +169,7 @@ async def upload_audio(session_id: str = Form(...), audio_file: UploadFile = Fil
     except Exception as e:
         return {"error": str(e)}
 
-import azure.cognitiveservices.speech as speechsdk
+# import azure.cognitiveservices.speech as speechsdk
 subscription_key = "72dmjGuP2icKJeQLcRqPvdLyhUXs3lVVYpuBrLmK2leXwDpg2lrAJQQJ99BDACYeBjFXJ3w3AAAYACOG81nO"
 region = "eastus"
 
