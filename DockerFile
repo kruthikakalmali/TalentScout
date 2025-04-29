@@ -1,20 +1,16 @@
-FROM python:3.12-slim
+FROM python:3.10-slim
 
-# Install audio libraries required for torchaudio
-RUN apt-get update && apt-get install -y \
-    ffmpeg \
-    sox \
-    libsndfile1 \
-    && rm -rf /var/lib/apt/lists/*
+# Install system dependencies
+RUN apt-get update && apt-get install -y libuuid1
 
 # Set working directory
 WORKDIR /app
 
-# Copy project files
+# Copy your files
 COPY . .
 
-# Install Python dependencies from requirements.txt
+# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Run FastAPI app
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run your app
+CMD ["python", "main.py"]  # replace with your entry point
