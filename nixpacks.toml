@@ -1,0 +1,13 @@
+[phases.setup]
+nixPkgs = ["python311", "libuuid", "pkg-config"]
+
+[phases.install]
+cmds = [
+  "python3.11 -m venv /opt/venv",
+  ". /opt/venv/bin/activate",
+  "pip install --upgrade pip",
+  "pip install -r requirements.txt"
+]
+
+[phases.start]
+cmd = "uvicorn app:app --host 0.0.0.0 --port $PORT"
