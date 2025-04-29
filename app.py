@@ -150,7 +150,7 @@ async def upload_audio(session_id: str = Form(...), audio_file: UploadFile = Fil
         mp3_data = await convert_webm_to_mp3(file_data)
 
         # Create a unique filename
-        unique_filename = f"{session_id}_{uuid.uuid4()}.mp3"
+        unique_filename = f"{session_id}.mp3"
         blob_client = container_client.get_blob_client(unique_filename)
 
         # Upload mp3 data to Azure
@@ -159,12 +159,12 @@ async def upload_audio(session_id: str = Form(...), audio_file: UploadFile = Fil
         blob_url = blob_client.url
         analysis_result = f"Simulated transcript for file: {unique_filename}"
 
-#         return {
-#             "message": "Audio uploaded successfully to Azure!",
-#             "blob_url": blob_url,
-#             "analysis": analysis_result,
-#             "filename": unique_filename
-#         }
+        return {
+            "message": "Audio uploaded successfully to Azure!",
+            "blob_url": blob_url,
+            "analysis": analysis_result,
+            "filename": unique_filename
+        }
 
     except Exception as e:
         return {"error": str(e)}
@@ -340,14 +340,13 @@ async def create_session(questions: list, description: str):
 
 
 class StartAdaptiveInterviewRequest(BaseModel):
-    candidate_name: str
-    job_description: str
+    job_id: str
     identity_id: str
 
 
 @app.post("/start_adaptive_interview")
 async def start_adaptive_interview(request: StartAdaptiveInterviewRequest):
-    session_id = "session"+str(uuid.uuid4())
+    session_id = "session_"+str(uuid.uuid4())
     query = f"SELECT * FROM c WHERE c.id = '{request.identity_id}'"
     items = list(container.query_items(query=query, enable_cross_partition_query=True))
     if not items:
@@ -357,12 +356,20 @@ async def start_adaptive_interview(request: StartAdaptiveInterviewRequest):
     # try:
     container.replace_item(item=item['id'], body=item)
 
+    query = f"SELECT * FROM c WHERE c.type = 'job' AND c.job_id = '{request.job_id}'"
+
+    items = []
+    # Execute the query
+    for item in container.query_items(query=query, enable_cross_partition_query=True):
+        items.append(item)
+    
+    job_description_from_query = items[0]['description']
 
     agent = AdaptiveInterviewAgent(
         endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
         api_key=os.getenv("AZURE_OPENAI_KEY"),
         deployment="gpt-4o",
-        job_description=request.job_description
+        job_description=job_description_from_query
     )
 
     first_question = await agent.generate_first_question()
@@ -373,38 +380,32 @@ async def start_adaptive_interview(request: StartAdaptiveInterviewRequest):
         "questions": [first_question],
         "sessionid": session_id,
         "type": "session",
-        "job_description": request.job_description,
+        "job_description": job_description_from_query,
         "idenitity_id": request.identity_id
     }
     container.create_item(body=item)
 
     return {"session_id": session_id, "first_question": first_question}
 
-#REMOVE THE AUDIO AS PARAMETER AND ADD TRANSCRIPT AS TEST
+class SubmitAdaptiveResponseRequest(BaseModel):
+    session_id: str
+    transcript: str
+
+
 @app.post("/submit_adaptive_response/")
-async def submit_adaptive_response(session_id: str = Form(...), audio_response: UploadFile = File(...)):
-    query = f"SELECT * FROM c WHERE c.id = '{session_id}'"
+async def submit_adaptive_response(request: SubmitAdaptiveResponseRequest):
+    query = f"SELECT * FROM c WHERE c.id = '{request.session_id}'"
     try:
         items = []
         items = list(container.query_items(
     query=query,
     enable_cross_partition_query=True
 ))
-        print(items[0])
-
     except Exception as e:
         print(e)
         raise HTTPException(status_code=404, detail="Session not found")
+    
 
-
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp:
-        file_location = tmp.name
-        content = await audio_response.read()
-        tmp.write(content)
-
-    # Transcribe audio
-    # transcriber = WhisperTranscriber()
-    transcript = "the answer is that springboot is a backend framerownxnxnxscbhcbhchxbcxhcbhx and a frontend frameormcm"
 
     agent = AdaptiveInterviewAgent(
         endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
@@ -413,7 +414,7 @@ async def submit_adaptive_response(session_id: str = Form(...), audio_response: 
         job_description=items[0]["job_description"]
     )
 
-    next_question = await agent.generate_followup_question(transcript)
+    next_question = await agent.generate_followup_question(request.transcript)
 
     items[0]["questions"].append(next_question)
     container.replace_item(item=items[0], body=items[0])

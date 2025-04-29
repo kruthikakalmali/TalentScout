@@ -9,8 +9,8 @@ import QuestionHistory from "./components/QuestionHistory";
 import Loader from "../Loader";
 import { PROD_HOST_URL } from "../../constants";
 
-const MAX_INTERVIEW_TIME = 1 * 60; // seconds
-const MAX_QUESTIONS = 3;
+const MAX_INTERVIEW_TIME = 30 * 60; 
+const MAX_QUESTIONS = 20;
 
 const CandidateAIInterviewPortal: React.FC = () => {
   const [sessionId, setSessionId] = useState<string | null>(null);
