@@ -39,7 +39,7 @@ interface Job {
 interface Applicant {
   name: string;
   email: string;
-  identity_id: string;
+  applicant_id: string;
 }
 
 const HRJobPortal: React.FC = () => {
@@ -128,7 +128,7 @@ const HRJobPortal: React.FC = () => {
   const handleSendInvite = async (applicant: Applicant) => {
     try {
       await axios.post(`${PROD_HOST_URL}/send-email`, {
-        identity_id: applicant.identity_id,
+        identity_id: applicant.applicant_id,
       });
       toast({
         title: `Invite sent to ${applicant.name}`,
