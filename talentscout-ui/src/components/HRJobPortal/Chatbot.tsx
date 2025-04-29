@@ -1,43 +1,53 @@
+// src/components/Chatbot.tsx
 import React, { useState } from "react";
 import axios from "axios";
 import { PROD_HOST_URL } from "../../constants";
-import './chatbot.css'
+import "./chatbot.css";
 
-const Chatbot = () => {
+interface ChatEntry {
+  user: string;
+  bot: string;
+}
+
+const Chatbot: React.FC = () => {
+  // 1) Default mode = "vector"
+  const [mode, setMode] = useState<"vector" | "openai">("vector");
   const [userMessage, setUserMessage] = useState("");
-  const [chatHistory, setChatHistory] = useState<{ user: string; bot: string }[]>([]);
+  const [chatHistory, setChatHistory] = useState<ChatEntry[]>([]);
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState<string>("");
 
   const sendMessage = async () => {
-    if (userMessage.trim() === "") return;
-    
-    if (!mode) {
-      alert("Please select a mode first.");
-      return;
-    }
+    const msg = userMessage.trim();
+    if (!msg) return;
+    if (!mode) return;
 
-    const newChatHistory = [...chatHistory, { user: userMessage, bot: "..." }];
-    setChatHistory(newChatHistory);
+    // 1) add placeholder entry
+    setChatHistory(prev => [...prev, { user: msg, bot: "…" }]);
     setLoading(true);
     setUserMessage("");
 
     try {
-      const response = await axios.post(`${PROD_HOST_URL}/chat`, {
-        message: userMessage,
-        mode: mode,
+      const { data } = await axios.post(`${PROD_HOST_URL}/chat`, {
+        message: msg,
+        mode,
       });
 
-      setChatHistory([
-        ...newChatHistory,
-        { user: userMessage, bot: response.data.reply },
-      ]);
-    } catch (error) {
-      console.error("Error sending message:", error);
-      setChatHistory([
-        ...newChatHistory,
-        { user: userMessage, bot: "Oops! Something went wrong." },
-      ]);
+      setChatHistory(prev => {
+        const updated = [...prev];
+        const last = updated[updated.length - 1];
+        updated[updated.length - 1] = { user: last.user, bot: data.reply };
+        return updated;
+      });
+    } catch (err) {
+      console.error(err);
+      setChatHistory(prev => {
+        const updated = [...prev];
+        updated[updated.length - 1] = {
+          user: updated[updated.length - 1].user,
+          bot: "Oops! Something went wrong.",
+        };
+        return updated;
+      });
     } finally {
       setLoading(false);
     }
@@ -45,9 +55,11 @@ const Chatbot = () => {
 
   return (
     <div className="chatbot-container">
-      <h2>Welcome to the HR Chatbot</h2>
-      
-      {/* Option to select search mode */}
+      <h2 style={{ textAlign: "center", marginBottom: 20 }}>
+        Welcome to the HR Chatbot
+      </h2>
+
+      {/* mode-selection */}
       <div className="mode-selection">
         <button
           onClick={() => setMode("vector")}
@@ -63,28 +75,35 @@ const Chatbot = () => {
         </button>
       </div>
 
-      {/* Display selected mode */}
-      {mode && <p>Selected Mode: {mode === "vector" ? "Search Candidate Database" : "Ask Any HR Question"}</p>}
+      <p style={{ margin: "10px 0" }}>
+        Selected Mode:{" "}
+        {mode === "vector"
+          ? "Search Candidate Database"
+          : "Ask Any HR Question"}
+      </p>
 
-      {/* Chat History */}
+      {/* chat history */}
       <div className="chat-history">
-        {chatHistory.map((chat, index) => (
-          <div key={index} className="chat-message">
-            <p><strong>You:</strong> {chat.user}</p>
-            <p><strong>Bot:</strong> {chat.bot}</p>
+        {chatHistory.map((c, i) => (
+          <div key={i} className="chat-message">
+            <p><strong>You:</strong> {c.user}</p>
+            <p><strong>Bot:</strong> {c.bot}</p>
           </div>
         ))}
       </div>
 
-      {/* User input */}
+      {/* input + send */}
       <div className="chat-input">
         <input
           type="text"
           value={userMessage}
-          onChange={(e) => setUserMessage(e.target.value)}
+          onChange={e => setUserMessage(e.target.value)}
           placeholder="Type your message..."
         />
-        <button onClick={sendMessage} disabled={loading || !mode}>
+        <button
+          onClick={sendMessage}
+          disabled={loading || !userMessage.trim()}
+        >
           {loading ? "Processing..." : "Send"}
         </button>
       </div>
