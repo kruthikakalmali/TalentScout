@@ -284,6 +284,9 @@ except Exception:
     logging.error("ffmpeg binary not found on PATH")
 print("FFmpeg path:", shutil.which("ffmpeg"))
 
+
+
+
 class Job(BaseModel):
     job_id: str
     description: str
