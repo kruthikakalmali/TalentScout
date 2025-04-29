@@ -174,8 +174,8 @@ subscription_key = "72dmjGuP2icKJeQLcRqPvdLyhUXs3lVVYpuBrLmK2leXwDpg2lrAJQQJ99BD
 region = "eastus"
 
 
-from pydub import AudioSegment
-from imageio_ffmpeg import get_ffmpeg_exe
+# from pydub import AudioSegment
+# from imageio_ffmpeg import get_ffmpeg_exe
 import torchaudio
 
 all_results = []
@@ -276,13 +276,13 @@ async def generate_report(request: AnalyzeRequest):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error analyzing audio: {str(e)}")
-import shutil,logging
-try:
-    version = subprocess.check_output(["ffmpeg", "-version"]).decode().split("\n")[0]
-    logging.info(f"Found system ffmpeg: {version}")
-except Exception:
-    logging.error("ffmpeg binary not found on PATH")
-print("FFmpeg path:", shutil.which("ffmpeg"))
+# import shutil,logging
+# try:
+#     version = subprocess.check_output(["ffmpeg", "-version"]).decode().split("\n")[0]
+#     logging.info(f"Found system ffmpeg: {version}")
+# except Exception:
+#     logging.error("ffmpeg binary not found on PATH")
+# print("FFmpeg path:", shutil.which("ffmpeg"))
 
 
 
