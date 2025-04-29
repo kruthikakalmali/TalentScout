@@ -83,32 +83,33 @@ container = database.create_container_if_not_exists(
 
 # Setup Azure OpenAI
 
-@app.post("/apply_to_job")
-async def apply_to_job(
-    name: str = Form(...),
-    email: str = Form(...),
-    job_id: str = Form(...),
-    resume: UploadFile = None
-):
-    application_id = "A"+str(random.randint(100000, 999999))
+# @app.post("/apply_to_job")
+# async def apply_to_job(
+#     name: str = Form(...),
+#     email: str = Form(...),
+#     job_id: str = Form(...),
+#     resume: UploadFile = None
+# ):
+#     application_id = "A"+str(random.randint(100000, 999999))
 
-    # Read PDF content
-    resume_bytes = await resume.read()
-    resume_text = extract_text_from_pdf(resume_bytes)
-    extracted_info = "abcdefgg"
-    # extracted_info = await extract_info_with_openai(resume_text)
-    item = {
-        "id": application_id,
-        "job_id": job_id,
-        "name": name,
-        "email": email,
-        "resume_text": resume_text,
-        "extracted_info": resume_text,
-        "type":"applicant"
-    }
-    container.create_item(body=item)
+#     # Read PDF content
+#     resume_bytes = await resume.read()
+#     resume_text = extract_text_from_pdf(resume_bytes)
+#     extracted_info = "abcdefgg"
+#     # extracted_info = await extract_info_with_openai(resume_text)
+#     item = {
+#         "id": application_id,
+#         "job_id": job_id,
+#         "name": name,
+#         "email": email,
+#         "resume_text": resume_text,
+#         "extracted_info": resume_text,
+#         "type":"applicant",
+#         "status": "APPLICATION_CREATED"
+#     }
+#     container.create_item(body=item)
 
-    return JSONResponse(content={"application_id": application_id, "message": "Application submitted successfully!"})
+#     return JSONResponse(content={"application_id": application_id, "message": "Application submitted successfully!"})
 
 # class AnalyzeRequest(BaseModel):
 #     session_id: str
@@ -124,6 +125,24 @@ container_client = blob_service_client.get_container_client(container_name)
 
 @app.post("/upload/")
 async def upload_audio(session_id: str = Form(...), audio_file: UploadFile = File(...)):
+    query = f"SELECT * FROM c WHERE c.id = '{session_id}'"
+    items = list(container.query_items(query=query, enable_cross_partition_query=True))
+
+    if not items:
+        raise HTTPException(status_code=404, detail="Session ID not found")
+
+    item = items[0]
+    identity_id = item.get("idenitity_id")  # or item["identity_id"] if it's a separate field
+
+    query1 = f"SELECT * FROM c WHERE c.id = '{identity_id}'"
+    items1 = list(container.query_items(query=query1, enable_cross_partition_query=True))
+    if not items1:
+        raise HTTPException(status_code=404, detail="Item not found")
+    item1 = items1[0]
+    item1["status"] = "INTERVIEW_COMPLETE"
+    # try:
+    container.replace_item(item=item1['id'], body=item1)
+
     try:
         file_data = await audio_file.read()
 
@@ -164,7 +183,7 @@ async def generate_report(request: AnalyzeRequest):
         return {"report": report}
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error analyzing audio: {str(e)}")
+        raise HTTPException(status_code=5000, detail=f"Error analyzing audio: {str(e)}")
 
 
 class Job(BaseModel):
@@ -329,6 +348,15 @@ class StartAdaptiveInterviewRequest(BaseModel):
 @app.post("/start_adaptive_interview")
 async def start_adaptive_interview(request: StartAdaptiveInterviewRequest):
     session_id = "session"+str(uuid.uuid4())
+    query = f"SELECT * FROM c WHERE c.id = '{request.identity_id}'"
+    items = list(container.query_items(query=query, enable_cross_partition_query=True))
+    if not items:
+        raise HTTPException(status_code=404, detail="Item not found")
+    item = items[0]
+    item["status"] = "INTERVIEW_IN_PROGRESS"
+    # try:
+    container.replace_item(item=item['id'], body=item)
+
 
     agent = AdaptiveInterviewAgent(
         endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
@@ -409,7 +437,19 @@ email_client = EmailClient.from_connection_string(CONNECTION_STRING)
 # Initialize FastAPI
 INTERVIEW_LINK = "https://talent-scout-teal.vercel.app/"
 @app.post("/send-email")
-async def send_email():
+async def send_email(identity_id: str = Form(...)):
+    query = f"SELECT * FROM c WHERE c.id = '{identity_id}'"
+    items = list(container.query_items(query=query, enable_cross_partition_query=True))
+    if not items:
+        raise HTTPException(status_code=404, detail="Item not found")
+    item = items[0]
+    item["status"] = "INTERVIEW_INVITE_SENT"
+    # try:
+    container.replace_item(item=item['id'], body=item)
+    #     return {"message": "Status updated", "item": item}
+    # except exceptions.CosmosHttpResponseError as e:
+    #     raise HTTPException(status_code=500, detail=str(e))
+
     html_content = f"""
     <html>
     <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
@@ -557,3 +597,157 @@ async def get_top_applications(job_id: str = Query(..., description="Get all job
     # if(final_results!=[]):
     return JSONResponse(content={"top_applications": final_results})
 
+
+
+
+
+# -------------- New: Azure Search Import -----------------
+# (no special import needed because we will call REST API manually)
+
+# -------- Azure Cognitive Search configuration ------------
+AZURE_SEARCH_ENDPOINT = "https://vectorsearchtalentscout.search.windows.net"  # like https://<search-service>.search.windows.net
+AZURE_SEARCH_API_KEY = "7ec74giuolqkWiIOeHl6luXvqh05T7VizeRKYcRyWSAzSeC1J3yz"
+AZURE_SEARCH_INDEX_NAME = "resumes"  # Name of your Azure Search index
+
+search_headers = {
+    "Content-Type": "application/json",
+    "api-key": AZURE_SEARCH_API_KEY
+}
+
+# ------------- Reuse your Azure OpenAI endpoint ------------
+api_key = "G0EcfY6zYcCx9QvKTGe1UruDMIEGph1MLUIVquMbipzdQDdfvDf1JQQJ99BDACHYHv6XJ3w3AAAAACOG0mTU"
+url = f"https://ai-kunalmodi0374ai269865417376.openai.azure.com/openai/deployments/text-embedding-ada-002/embeddings?api-version=2023-05-15"
+embedding_headers = {
+    "Authorization": f"Bearer {api_key}",
+    "Content-Type": "application/json"
+}
+
+def get_embedding(text):
+    data = {"input": [text]}
+    response = requests.post(url, headers=embedding_headers, json=data)
+    if response.status_code == 200:
+        return response.json()['data'][0]['embedding']
+    else:
+        raise Exception(f"Error in embedding generation: {response.text}")
+
+# -------------------------------------------------------------
+# ------------- Upload applicant to Azure Search -------------
+async def upload_applicant_to_search(applicant):
+    embedding = get_embedding(applicant['resume_text'])
+    
+    upload_url = f"{AZURE_SEARCH_ENDPOINT}/indexes/{AZURE_SEARCH_INDEX_NAME}/docs/index?api-version=2023-11-01"
+    payload = {
+        "value": [
+            {
+                "@search.action": "upload",
+                "id": applicant['id'],
+                "name": applicant['name'],
+                "email": applicant['email'],
+                "resume_text": applicant['resume_text'],
+                "resume_embedding": embedding
+            }
+        ]
+    }
+    response = requests.post(upload_url, headers=search_headers, json=payload)
+    if response.status_code != 200:
+        raise Exception(f"Failed to upload to Azure Search: {response.text}")
+
+# --------------------------------------------------------------
+# -------------- Now: Updated /get_top_applications -----------
+@app.get("/get_top_applications_by_job_id2")
+async def get_top_applications2(job_id: str = Query(..., description="Get all job ids")):
+    # Step 1: Get Job Description
+    jd_query = f"SELECT * FROM c WHERE c.type = 'job' AND c.id = '{job_id}'"
+    jobs = []
+    for item in container.query_items(query=jd_query, enable_cross_partition_query=True):
+        jobs.append(item)
+    if not jobs:
+        return JSONResponse(content={"error": "Job not found"}, status_code=404)
+
+    jd_text = jobs[0]['description']
+    jd_embedding = get_embedding(jd_text)
+
+    # Step 2: Search Azure Cognitive Search for top matching resumes
+    search_url = f"{AZURE_SEARCH_ENDPOINT}/indexes/{AZURE_SEARCH_INDEX_NAME}/docs/search?api-version=2023-11-01"
+
+    search_body = {
+        "vector": {
+            "value": jd_embedding,
+            "fields": "resume_embedding",
+            "k": 10  # Get top 10 applicants
+        },
+        "select": "id,name,email,resume_text"
+    }
+
+    response = requests.post(search_url, headers=search_headers, json=search_body)
+    if response.status_code != 200:
+        raise Exception(f"Azure Search failed: {response.text}")
+
+    search_results = response.json()['value']
+
+    # Step 3: For each matched resume, score it via ResumeScorer LLM
+    final_results = []
+
+    for result in search_results:
+        applicant_id = result['id']
+        name = result.get('name', '')
+        email = result.get('email', '')
+        resume_text = result.get('resume_text', '')
+
+        # LLM based scoring (you already have)
+        agent = ResumeScorer(
+            endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+            api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+            deployment="gpt-4o"
+        )
+        report = await agent.score_resume(jd_text, resume_text)
+
+        if report:
+            final_results.append({
+                "applicant_id": applicant_id,
+                "name": name,
+                "email": email,
+                "skill_match": report.get("skill_match"),
+                "experience_relevance": report.get("experience_relevance"),
+                "cultural_fit_guess": report.get("cultural_fit_guess"),
+                "strengths": report.get("strengths"),
+                "potential_gaps": report.get("potential_gaps"),
+                "overall_fit_summary": report.get("overall_fit_summary"),
+            })
+
+    return JSONResponse(content={"top_applications": final_results})
+
+
+
+@app.post("/apply_to_job")
+async def apply_to_job(
+    name: str = Form(...),
+    email: str = Form(...),
+    job_id: str = Form(...),
+    resume: UploadFile = None
+):
+    application_id = "A"+str(random.randint(100000, 999999))
+
+    # Read PDF content
+    resume_bytes = await resume.read()
+    resume_text = extract_text_from_pdf(resume_bytes)
+    extracted_info = "abcdefgg"
+    # extracted_info = await extract_info_with_openai(resume_text)
+    item = {
+        "id": application_id,
+        "job_id": job_id,
+        "name": name,
+        "email": email,
+        "resume_text": resume_text,
+        "extracted_info": resume_text,
+        "type":"applicant",
+        "status": "APPLICATION_CREATED"
+    }
+    await upload_applicant_to_search(item)
+    container.create_item(body=item)
+
+    return JSONResponse(content={"application_id": application_id, "message": "Application submitted successfully!"})
+
+
+
+    
