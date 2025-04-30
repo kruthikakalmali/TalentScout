@@ -1,6 +1,6 @@
 import React from "react";
 import { Box, List, ListItem, Text, Image, useColorModeValue } from "@chakra-ui/react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 
 // Define the shape of each navigation item
 interface NavItem {
@@ -15,6 +15,9 @@ const navItems: NavItem[] = [
 ];
 
 const Sidebar: React.FC = () => {
+  const location = useLocation();
+  const showNav = !location.pathname.includes("/candidate");
+
   const gradient = "linear(to-b, purple.700, blue.900)";
   const defaultTextColor = useColorModeValue("whiteAlpha.900", "whiteAlpha.900");
   const hoverAccent = useColorModeValue("purple.700", "purple.300");
@@ -41,34 +44,35 @@ const Sidebar: React.FC = () => {
         />
       </Box>
 
-      {/* Dynamically render navigation links from config */}
-      <List spacing={0} mt={4} flexGrow={1}>
-        {navItems.map(({ label, path }, idx) => (
-          <ListItem
-            key={path}
-            borderBottom={idx < navItems.length - 1 ? "1px solid" : undefined}
-            borderBottomColor={separatorColor}
-          >
-            {/* Use 'end' prop for exact matching to avoid prefix matches */}
-            <NavLink to={path} end style={{ textDecoration: 'none' }}>
-              {({ isActive }) => (
-                <Box
-                  w="100%"
-                  p={3}
-                  bg={isActive ? 'whiteAlpha.800' : itemBg}
-                  color={isActive ? hoverAccent : defaultTextColor}
-                  _hover={{ bg: 'white', color: hoverAccent }}
-                  transition="background 0.2s, color 0.2s"
-                >
-                  <Text fontSize="lg" fontWeight="medium" textAlign="center">
-                    {label}
-                  </Text>
-                </Box>
-              )}
-            </NavLink>
-          </ListItem>
-        ))}
-      </List>
+      {/* Only show navigation when not on a candidate route */}
+      {showNav && (
+        <List spacing={0} mt={4} flexGrow={1}>
+          {navItems.map(({ label, path }, idx) => (
+            <ListItem
+              key={path}
+              borderBottom={idx < navItems.length - 1 ? "1px solid" : undefined}
+              borderBottomColor={separatorColor}
+            >
+              <NavLink to={path} end style={{ textDecoration: 'none' }}>
+                {({ isActive }) => (
+                  <Box
+                    w="100%"
+                    p={3}
+                    bg={isActive ? 'whiteAlpha.800' : itemBg}
+                    color={isActive ? hoverAccent : defaultTextColor}
+                    _hover={{ bg: 'white', color: hoverAccent }}
+                    transition="background 0.2s, color 0.2s"
+                  >
+                    <Text fontSize="lg" fontWeight="medium" textAlign="center">
+                      {label}
+                    </Text>
+                  </Box>
+                )}
+              </NavLink>
+            </ListItem>
+          ))}
+        </List>
+      )}
     </Box>
   );
 };

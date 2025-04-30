@@ -4,8 +4,7 @@ import Layout from "./components/Layout";
 import HRJobPortal from "./components/HRJobPortal/HRJobPortal";
 import CandidateAIInterviewPortal from "./components/CandidateAIInterviewPortal/CandidateAIInterviewPortal";
 import InterviewCompletedCandidates from "./components/HRJobPortal/InterviewCompletedCandidates";
-import GeneratedReportCandidate from "./components/CandidateAIInterviewPortal/components/GeneratedReportCandidate";
-import GeneratedReportRecruiter from "./components/HRJobPortal/GeneratedReportRecruiter";
+import GenerateReportPage from "./components/HRJobPortal/GenerateReportPage";
 import NotFound from "./components/NotFound/NotFound";
 
 function App() {
@@ -21,15 +20,15 @@ function App() {
           />
           <Route
             path="/recruiter/generated-feedback-report"
-            element={<GeneratedReportRecruiter />}
+            element={<GenerateReportPage reportType="recruiter" />}
           />
           <Route
-            path="/candidate-ai-interview-portal"
+            path="/candidate/candidate-ai-interview-portal"
             element={<CandidateAIInterviewPortal />}
           />
           <Route
             path="/candidate/generated-feedback-report"
-            element={<GeneratedReportCandidate />}
+            element={<GenerateReportPage reportType="candidate" />}
           />
           <Route path="*" element={<NotFound />} />
         </Routes>
