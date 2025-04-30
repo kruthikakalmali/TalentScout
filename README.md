@@ -51,62 +51,6 @@ An intelligent assistant designed to empower recruiters with real-time support:
   > “Suggest five screening questions for a frontend engineer”  
   > “What are common red flags in junior developer resumes?”
 
----
-
-## 🛠️ Tech Stack
-
-- **AZURE AI SERVICES - LLMs**:_ _`gpt-40` Interview evaluation and report generation and recruitment assistance,`text-embedding-ada-002`**: Text similarity and semantic search_ _
-- **AZURE COGNITIVE SEARCH**: Vector-powered candidate search
-- **AZURE COSMOS DB**: Store candidates,jobs and session related information
-- **AZURE SPEECH SERVICES SDK**: Voice transcription
-- **AZURE BLOB**: To store interview audios
-- **AZURE COMMUNICATION SERVICES**: To send emails to the relevant candidates
-- **LIBROSA**: Interview audio analysis
-- **FastAPI**:Backend development
-- **ReactJS,Chakra UI**:FrontEnd development
-- **WEB SPEECH API**:Real time speech transcription
-- **VERCEL**:Frontend deployment
-- **RAILWAY**:Backend deployment
-
----
-## 🛠️ Tech Stack
-
-- **Azure AI Services - LLMs**:  
-  `gpt-4o` for interview evaluation, report generation, and recruitment assistance  
-  `text-embedding-ada-002` for semantic search and text similarity
-
-- **Azure Cognitive Search**:  
-  Vector-powered candidate search and discovery
-
-- **Azure Cosmos DB**:  
-  Scalable NoSQL database to store candidates, job details, and sessions
-
-- **Azure Speech Services SDK**:  
-  High-quality voice transcription of interview audio
-
-- **Azure Blob Storage**:  
-  Secure storage for audio files and media
-
-- **Azure Communication Services**:  
-  Email communication with candidates
-
-- **Librosa**:  
-  Audio analysis and processing of interview recordings
-
-- **FastAPI**:  
-  High-performance backend development framework
-
-- **ReactJS** & **Chakra UI**:  
-  Modern, responsive frontend interface
-
-- **Web Speech API**:  
-  Real-time speech transcription in the browser
-
-- **Vercel**:  
-  Frontend deployment platform
-
-- **Railway**:  
-  Backend deployment platform
 
 
 | Technology                    | Purpose                                                                 |
