@@ -77,6 +77,11 @@ An intelligent assistant designed to empower recruiters with real-time support:
 
 ![alt text](https://github.com/kruthikakalmali/TalentScout/blob/main/Architecture_diagrams/recruiter_copilot.png)
 
+
+
+![alt text](https://github.com/kruthikakalmali/TalentScout/blob/main/Architecture_diagrams/jd_to_resume_matching.png)
+
+
 ## ✅ Benefits
 
 - Reduce recruiter workload through automation
