@@ -212,7 +212,7 @@ def session_stopped(evt):
     done.set()
 
 import threading
-import azure.cognitiveservices.speech as speechsdk
+
 @app.post("/generate_report")
 async def generate_report(request: AnalyzeRequest):
     try:
