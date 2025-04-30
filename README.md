@@ -55,18 +55,18 @@ An intelligent assistant designed to empower recruiters with real-time support:
 
 ## 🛠️ Tech Stack
 
-- **Azure AI services - LLMs**:`gpt-40` Interview evaluation and report generation and recruitment assistance,`text-embedding-ada-002`**: Text similarity and semantic search
-- **Azure Cognitive Search**: Vector-powered candidate search
-- **Azure Cosmos DB**: Resume data storage
-- **Azure Speech Services SDK**: Voice transcription
-- **Azure blob**: To store interview audios
-- **Azure communication services**: To send emails to the relevant candidates
-- **Librosa**: Interview audio analysis
+- **AZURE AI SERVICES - LLMs**:_ _`gpt-40` Interview evaluation and report generation and recruitment assistance,`text-embedding-ada-002`**: Text similarity and semantic search_ _
+- **AZURE COGNITIVE SEARCH**: Vector-powered candidate search
+- **AZURE COSMOS DB**: Store candidates,jobs and session related information
+- **AZURE SPEECH SERVICES SDK**: Voice transcription
+- **AZURE BLOB**: To store interview audios
+- **AZURE COMMUNICATION SERVICES**: To send emails to the relevant candidates
+- **LIBROSA**: Interview audio analysis
 - **FastAPI**:Backend development
 - **ReactJS,Chakra UI**:FrontEnd development
-- **Web Speech API**:Real time speech transcription
-- **Vercel**:Frontend deployment
-- **Railway**:Backend deployment
+- **WEB SPEECH API**:Real time speech transcription
+- **VERCEL**:Frontend deployment
+- **RAILWAY**:Backend deployment
 
 ---
 
