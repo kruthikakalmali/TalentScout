@@ -97,4 +97,4 @@ An intelligent assistant designed to empower recruiters with real-time support:
 
 ## 📬 Contact
 
-For inquiries, demos, or integrations, please reach out at [kruthikakalmali@example.com],[kunalmodi123@gmail.com].
+For inquiries, demos, or integrations, please reach out at [kruthikakalmali@gmail.com],[kunalmodi123@gmail.com].
