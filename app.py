@@ -45,11 +45,12 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "https://talent-scout-teal.vercel.app"],
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "https://talent-scout-teal.vercel.app","http://localhost:8000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 
 AZURE_CONNECTION_STRING = os.getenv("AZURE_CONNECTION_STRING")
@@ -211,7 +212,7 @@ def session_stopped(evt):
     done.set()
 
 import threading
-
+import azure.cognitiveservices.speech as speechsdk
 @app.post("/generate_report")
 async def generate_report(request: AnalyzeRequest):
     try:
@@ -227,7 +228,7 @@ async def generate_report(request: AnalyzeRequest):
         torchaudio.save("output.wav", waveform, 16000)
         # GENERATE TRANSCRIPT FOR AZURE SPEECH SERVICES SDK
         speech_config = speechsdk.SpeechConfig(subscription=subscription_key, region=region)
-        audio_config = speechsdk.audio.AudioConfig(filename=file_path)
+        audio_config = speechsdk.audio.AudioConfig(filename="output.wav")
         recognizer = speechsdk.SpeechRecognizer(speech_config=speech_config, audio_config=audio_config)
         all_results = []
         def recognized(evt):
