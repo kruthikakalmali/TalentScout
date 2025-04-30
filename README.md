@@ -71,7 +71,7 @@ An intelligent assistant designed to empower recruiters with real-time support:
 
 ---
 
-
+![alt text](https://raw.githubusercontent.com/kruthikakalmali/TalentScout/refs/heads/main/Architecture_diagrams/interview_flow.png)
 ## ✅ Benefits
 
 - Reduce recruiter workload through automation
