@@ -10,7 +10,7 @@ import os
 import librosa
 import numpy as np
 import subprocess
-import ffmpeg
+
 from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
 from pydantic import BaseModel
 import azure.cosmos
@@ -178,9 +178,6 @@ except Exception as e:
 subscription_key = "72dmjGuP2icKJeQLcRqPvdLyhUXs3lVVYpuBrLmK2leXwDpg2lrAJQQJ99BDACYeBjFXJ3w3AAAYACOG81nO"
 region = "eastus"
 
-
-# from pydub import AudioSegment
-# from imageio_ffmpeg import get_ffmpeg_exe
 import torchaudio
 
 all_results = []
@@ -218,14 +215,16 @@ import threading
 @app.post("/generate_report")
 async def generate_report(request: AnalyzeRequest):
     try:
+        import azure.cognitiveservices.speech as speechsdk
+        print("Speech SDK imported successfully!")
         file_path = await download_audio_from_azure(request.session_id+".mp3")
         # CONVERT TO WAV FOR AZURE SPEECH SERVICES SDK
         waveform, sample_rate = torchaudio.load(file_path)
-        # resampler = torchaudio.transforms.Resample(orig_freq=sample_rate, new_freq=16000)
-        # waveform = resampler(waveform)
-        # if waveform.shape[0] > 1:
-        #     waveform = waveform.mean(dim=0, keepdim=True)
-        # torchaudio.save("output.wav", waveform, 16000)
+        resampler = torchaudio.transforms.Resample(orig_freq=sample_rate, new_freq=16000)
+        waveform = resampler(waveform)
+        if waveform.shape[0] > 1:
+            waveform = waveform.mean(dim=0, keepdim=True)
+        torchaudio.save("output.wav", waveform, 16000)
         # GENERATE TRANSCRIPT FOR AZURE SPEECH SERVICES SDK
         speech_config = speechsdk.SpeechConfig(subscription=subscription_key, region=region)
         audio_config = speechsdk.audio.AudioConfig(filename=file_path)
@@ -281,13 +280,7 @@ async def generate_report(request: AnalyzeRequest):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error analyzing audio: {str(e)}")
-import shutil,logging
-try:
-    version = subprocess.check_output(["ffmpeg", "-version"]).decode().split("\n")[0]
-    logging.info(f"Found system ffmpeg: {version}")
-except Exception:
-    logging.error("ffmpeg binary not found on PATH")
-print("FFmpeg path:", shutil.which("ffmpeg"))
+
 
 
 
@@ -1135,47 +1128,37 @@ def chatbot(user_input):
 
 class ChatRequest(BaseModel):
     message: str
-    mode: str  # 'vector' or 'openai'
+    mode: str
+    sessionid : str
 
-
-# @app.post("/chat")
-# def chat_route(request: ChatRequest):
-#     # data = request.json()
-#     mode = request.mode
-#     message = request.message
-
-#     if mode == "vector":
-#         results = chatbot(message)
-#         return {"reply": json.dumps(results)}
-#     elif mode == "openai":
-#         response = openai.ChatCompletion.create(
-#             model="gpt-4",
-#             messages=[{"role": "user", "content": message}]
-#         )
-#         return {"reply": response.choices[0].message['content']}
-
+from AnswerQueriesAgent import QueryAgent
 @app.post("/chat")
-async def chat(req: ChatRequest):
-    if req.mode == "vector":
-        embedding = get_embedding(req.message)
+async def chat_route(request: ChatRequest):
+    # data = request.json()
+    mode = request.mode
+    message = request.message
+    sessionid = request.sessionid
+
+    if mode == "vector":
         results = chatbot(message)
-        return results
-        # if not results.get("value"):
-        #     return {"reply": "No matching resumes found."}
+        return {"reply": json.dumps(results)}
+    elif mode == "openai":
+        agent = QueryAgent(
+            endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+            api_key=os.getenv("AZURE_OPENAI_KEY"),
+            deployment=os.getenv("AZURE_OPENAI_DEPLOYMENT")
+        )
+        reply = await agent.chat(request.sessionid, request.message)
 
-        # reply = "Here are the top matches:\n\n"
-        # for r in results["value"]:
-        #     reply += f"👤 Name: {r['name']}\n📧 Email: {r['email']}\n📊 Match Score: {round(r['@search.score'] * 100, 2)}%\n\n"
-        # return {"reply": reply.strip()}
+        return {"reply": reply}
 
-    elif req.mode == "openai":
-        # prompt = f"You are a helpful recruiter assistant. User asked: '{req.message}'"
-        # response = openai.ChatCompletion.create(
-        #     model="gpt-3.5-turbo",
-        #     messages=[{"role": "user", "content": prompt}]
-        # )
-        # return {"reply": response['choices'][0]['message']['content']}
-        return null
 
-    else:
-        return {"reply": "Invalid mode."}
+@app.post("/clear-context")
+async def clear_context_endpoint(request: ChatRequest):
+    agent = QueryAgent(
+        endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+        api_key=os.getenv("AZURE_OPENAI_KEY"),
+        deployment=os.getenv("AZURE_OPENAI_DEPLOYMENT")
+    )
+    agent.clear_context(request.sessionid)
+    return {"message": f"Context cleared for session: {request.sessionid}"}

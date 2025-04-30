@@ -30,6 +30,7 @@ const Chatbot: React.FC = () => {
       const { data } = await axios.post(`${PROD_HOST_URL}/chat`, {
         message: msg,
         mode,
+        sessionid:"s12345"
       });
 
       setChatHistory(prev => {
