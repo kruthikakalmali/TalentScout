@@ -109,6 +109,25 @@ An intelligent assistant designed to empower recruiters with real-time support:
   Backend deployment platform
 
 
+| Technology                    | Purpose                                                                 |
+|------------------------------|-------------------------------------------------------------------------|
+| **Azure AI Services - LLMs** | `gpt-4o`: Interview evaluation, report generation, recruitment assistance  
+`text-embedding-ada-002`: Text similarity and semantic search |
+| **Azure Cognitive Search**   | Vector-powered semantic candidate search                               |
+| **Azure Cosmos DB**          | NoSQL database for storing candidates, jobs, and sessions               |
+| **Azure Speech Services SDK**| Voice-to-text transcription of interview recordings                     |
+| **Azure Blob Storage**       | Storage for audio files and media                                       |
+| **Azure Communication Services** | Sending email communications to candidates                        |
+| **Librosa**                  | Audio feature extraction and analysis                                   |
+| **FastAPI**                  | Backend development framework                                           |
+| **ReactJS & Chakra UI**      | Frontend development with responsive, accessible UI                     |
+| **Web Speech API**           | Real-time speech transcription in the browser                           |
+| **Vercel**                   | Frontend hosting and deployment                                         |
+| **Railway**                  | Backend deployment and infrastructure                                   |
+
+---
+
+
 ## ✅ Benefits
 
 - Reduce recruiter workload through automation
