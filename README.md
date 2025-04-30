@@ -58,9 +58,16 @@ An intelligent assistant designed to empower recruiters with real-time support:
 - **OpenAI `text-embedding-ada-002`**: Text similarity and semantic search
 - **Azure Cosmos DB**: Resume data storage
 - **Azure Cognitive Search**: Vector-powered candidate search
-- **Azure Speech Services**: Voice transcription
-- **Librosa**: Audio signal analysis
-- **LLMs**: Interview evaluation and report generation
+- **Azure Speech Services SDK**: Voice transcription
+- **Librosa**: Interview audio analysis
+- **Azure AI services - LLMs**:`gpt-40` Interview evaluation and report generation and recruitment assistance
+- **Azure blob**: To store interview audios
+- **Azure communication services**: To send emails to the relevant candidates
+- **FastAPI**:Backend development
+- **ReactJS,Chakra UI**:FrontEnd development
+- **Web Speech API**:Real time speech transcription
+- **Vercel**:Frontend deployment
+- **Railway**:Backend deployment
 
 ---
 
