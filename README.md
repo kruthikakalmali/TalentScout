@@ -66,6 +66,7 @@ An intelligent assistant designed to empower recruiters with real-time support:
 | **Azure Speech Services SDK**| Voice-to-text transcription of interview recordings                     |
 | **Azure Blob Storage**       | Storage for audio files and media                                       |
 | **Azure Communication Services** | Sending email communications to candidates                          |
+|**Pydantic**                  | Type enforcement                                                        |
 | **Librosa**                  | Audio feature extraction and analysis                                   |
 | **FastAPI**                  | Backend development framework                                           |
 | **ReactJS & Chakra UI**      | Frontend development with responsive, accessible UI                     |
