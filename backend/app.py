@@ -35,11 +35,11 @@ import json
 from typing import List, Dict
 from azure.communication.email import EmailClient
 from ResumeScorer import ResumeScorer
-from AzureResumeAnalysisAgent import AzureResumeAnalysisAgent
+from backend.Agents.AzureResumeAnalysisAgent import AzureResumeAnalysisAgent
 from downloadaudiofromazure import download_audio_from_azure
 from AnalyzeRequest import AnalyzeRequest
-from AzureVoiceAnalysisAgent import AzureVoiceAnalysisAgent
-from AdaptiveInterviewAgent import AdaptiveInterviewAgent,StartAdaptiveInterviewRequest
+from backend.Agents.AzureVoiceAnalysisAgent import AzureVoiceAnalysisAgent
+from backend.Agents.AdaptiveInterviewAgent import AdaptiveInterviewAgent,StartAdaptiveInterviewRequest
 from utils import convert_webm_to_mp3
 app = FastAPI()
 
@@ -1132,7 +1132,7 @@ class ChatRequest(BaseModel):
     mode: str
     sessionid : str
 
-from AnswerQueriesAgent import QueryAgent
+from backend.Agents.AnswerQueriesAgent import QueryAgent
 @app.post("/chat")
 async def chat_route(request: ChatRequest):
     # data = request.json()

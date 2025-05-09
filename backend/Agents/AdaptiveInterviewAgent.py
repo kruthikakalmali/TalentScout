@@ -43,10 +43,10 @@ from typing import List, Dict
 import whisper
 from azure.communication.email import EmailClient
 from ResumeScorer import ResumeScorer
-from AzureResumeAnalysisAgent import AzureResumeAnalysisAgent
+from backend.Agents.AzureResumeAnalysisAgent import AzureResumeAnalysisAgent
 from downloadaudiofromazure import download_audio_from_azure
 from AnalyzeRequest import AnalyzeRequest
-from AzureVoiceAnalysisAgent import AzureVoiceAnalysisAgent
+from backend.Agents.AzureVoiceAnalysisAgent import AzureVoiceAnalysisAgent
 from utils import convert_webm_to_mp3
 
 
