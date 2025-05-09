@@ -96,6 +96,19 @@ An intelligent assistant designed to empower recruiters with real-time support:
 
 ---
 
+##Steps to run the code
+#Fastapi Backend
+
+pip install -r requirements.txt
+uvicorn app:app --reload
+
+#Reactjs frontend
+
+npm install
+npm start
+
+
+
 ## 📬 Contact
 
 For inquiries, demos, or integrations, please reach out at [kruthikakalmali@gmail.com],[kunalmodi123@gmail.com].
