@@ -96,16 +96,18 @@ An intelligent assistant designed to empower recruiters with real-time support:
 
 ---
 
-##Steps to run the code
-#Fastapi Backend
+## Steps to run the code
+# Fastapi Backend
 
-pip install -r requirements.txt
-uvicorn app:app --reload
+```pip install -r requirements.txt```
 
-#Reactjs frontend
+```uvicorn app:app --reload```
 
-npm install
-npm start
+# Reactjs frontend
+
+```npm install```
+
+```npm start```
 
 
 
